@@ -1,0 +1,86 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    
+    # 1. System Updates and Basic Build Tools
+    apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common \
+        dirmngr \
+        wget \
+        git \
+        curl \
+        build-essential \
+        zlib1g-dev \
+        libncurses5-dev \
+        libperl-dev \
+        libparallel-forkmanager-perl \
+        libcurl4-openssl-dev \
+        libxml2-dev \
+        libssl-dev \
+        ca-certificates
+
+    # 2. Install R 4.x (Ubuntu 22.04 default is 4.1.2+, which is perfect for LncFinder)
+    apt-get install -y r-base r-base-dev
+
+    # 3. Install Python 2.7 and Pip2 (Legacy requirements for CPAT 1.2.4)
+    apt-get install -y python2.7 python2.7-dev
+    curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+    python2.7 get-pip.py
+    pip2 install CPAT==1.2.4
+
+    # 4. Install HISAT2 (Official Linux Binary)
+    # Replace HISAT2 with STAR (Static Binary - Very Stable)
+    cd /opt
+    wget https://github.com/alexdobin/STAR/archive/2.7.11b.tar.gz
+    tar -xzf 2.7.11b.tar.gz
+    # We use the pre-compiled Linux binary inside the bin folder
+    cp STAR-2.7.11b/bin/Linux_x86_64_static/STAR /usr/local/bin/
+    rm -rf 2.7.11b.tar.gz STAR-2.7.11b
+    
+    # 5. Install StringTie (v2.1.4 Binary)
+    cd /opt
+    wget https://github.com/gpertea/stringtie/releases/download/v2.1.4/stringtie-2.1.4.Linux_x86_64.tar.gz
+    tar xzf stringtie-2.1.4.Linux_x86_64.tar.gz
+    
+    # 6. Install Diamond (Binary)
+    wget https://github.com/bbuchfink/diamond/releases/download/v2.1.9/diamond-linux64.tar.gz
+    tar xzf diamond-linux64.tar.gz -C /usr/local/bin
+
+    # 7. Install FEELnc
+    git clone https://github.com/tderrien/FEELnc.git /opt/FEELnc
+
+    # 8. Install fastp (Binary)
+    wget http://opengene.org/fastp/fastp
+    chmod a+x ./fastp
+    mv fastp /usr/local/bin/
+
+    # 9. Install Plant-LncRNA-pipeline-v2
+    git clone https://github.com/xuechantian/Plant-LncRNA-pipeline-v2.git /opt/Plant-LncRNA
+
+    # 10. Install R Packages (LncFinder and seqinr)
+    R -e "install.packages(c('LncFinder', 'seqinr'), repos='https://cloud.r-project.org/')"
+
+%environment
+    # 1. Update PATH: 
+    # - Added /opt/STAR-2.7.11b/bin/Linux_x86_64_static (the specific subfolder where the executable lives)
+    # - Fixed the typo (STAR instead of TAR)
+    export PATH=$PATH:/opt/STAR-2.7.11b/bin/Linux_x86_64_static:/opt/stringtie-2.1.4.Linux_x86_64:/opt/FEELnc/scripts:/opt/FEELnc/bin:/opt/Plant-LncRNA
+    
+    # 2. FEELnc variables (Required for FEELnc to find its own modules)
+    export FEELNCPATH=/opt/FEELnc/bin/
+    export PERL5LIB=$PERL5LIB:/opt/FEELnc/lib/
+    
+    # 3. Clean up locale errors
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+
+%test
+    # Verification checks to ensure the build succeeded
+    echo "Checking CPAT..."
+    cpat.py --version
+    echo "Checking R Packages..."
+    R -e "library(LncFinder); library(seqinr); print('R packages loaded successfully!')"
+    #echo "Checking STAR..."
+    #STAR --version

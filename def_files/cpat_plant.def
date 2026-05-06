@@ -22,7 +22,7 @@ From: ubuntu:18.04
 
     # 1. Upgrade pip to the last version that supported Python 2.7
     pip install --upgrade "pip < 21.0"
-
+    
     # 2. Pre-install the build tools
     pip install "setuptools < 45.0.0"
     pip install "wheel < 0.30.0"
@@ -31,8 +31,8 @@ From: ubuntu:18.04
     pip install "numpy < 1.17"
     pip install "cython < 0.30"
     # Pysam 0.15 is the last stable version for Python 2.7
-    pip install "pysam == 0.15.3"
-
+    pip install "pysam == 0.15.3" 
+    
     # 4. Finally, install CPAT 1.2.4
     pip install CPAT==1.2.4
 

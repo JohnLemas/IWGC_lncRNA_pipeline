@@ -1,0 +1,36 @@
+Bootstrap: docker
+From: ubuntu:18.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # 1. Install build tools and system headers
+    apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common \
+        dirmngr \
+        gnupg \
+        wget \
+        curl \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        make \
+        gcc \
+        g++ \
+        gfortran
+
+    # 2. Add R 3.6 repo
+    wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | apt-key add -
+    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/"
+    apt-get update && apt-get install -y r-base r-base-dev
+
+    # 3. Use Posit P3M Snapshot for Jan 1, 2020
+    # This URL is currently active and specifically built for R 3.6 on Ubuntu 18.04
+    R -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/2020-01-01')); \
+          install.packages(c('seqinr', 'e1071', 'LncFinder'), dependencies=TRUE)"
+
+%test
+    R -e "library(LncFinder); print(packageVersion('e1071'))"
+
+%runscript
+    exec Rscript "$@"
