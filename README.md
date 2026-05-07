@@ -2,14 +2,29 @@
 ## Expanding lncRNA prediction for nonmodel plant species
 ### Pipeline workflow and resources
 ---
-## Table of Contents
+### Table of Contents
+- [General overview](#general-overview)
+- [Directories](*directories)
 - [Citation](#citation)
-  - Original pipeline development citation
-- [General Workflow](#general-workflow)
 ---
-## Citation
+### General overview
+1. Obtain 'truth' dataset from PLncDB for a given speices
+2. Get a list of pmids associated with the rna-seq projects under the species tab in PLncDB
+3. Use EDirect and SRA-Toolkit to get raw data from each of these projects
+4. Download a reference genome and annotation file
+5. Trim raw fastq files and align trimmed reads to reference
+6. Assemble a reference-guided de novo transcriptome using stringtie
+7. Obtain candidate lncRNAs (novel transcripts called by stringtie) using grep and gffread
+8. Run these candidates through each ML tool
+9. Intersect IDs that passed each tool to pbtain high-confidence lncRNAs
+10. Use sequence alignment to compare high-confidence candidates to 'truth' dataset
+---
+### Directories
+- def_files
+  - `.def` files used to generate required images
+- inputs
+---
+### Citation
 This Workflow was adapted from Plant-LncPipe for use in *ab initio* lncRNA prediction in weedy species.
-Original pipeline doi: [Plant-LncPipe](https://doi.org/10.1093/hr/uhae041) 
-Pipeline GitHub: [Plant-LncRNA-pipeline-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2)
----
-
+- Original pipeline doi: [Plant-LncPipe](https://doi.org/10.1093/hr/uhae041) 
+- Pipeline GitHub: [Plant-LncRNA-pipeline-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2)
