@@ -1,5 +1,5 @@
 # IWGC_lncRNA_pipeline
-## Expanding lncRNA prediction for nonmodel plant species
+## Expanding lncRNA prediction to nonmodel weedy species
 ### Pipeline workflow and resources
 ---
 ### Table of Contents
@@ -22,9 +22,10 @@
 ### Directories
 - def_files
   - `.def` files used to generate required images
-- inputs
+- scripts
+  - MSU HPCC sbatch scripts used for each step of the pipeline
 ---
 ### Citation
-This Workflow was adapted from Plant-LncPipe for use in *ab initio* lncRNA prediction in weedy species.
+This workflow was adapted from Plant-LncPipe for use in *ab initio* lncRNA prediction in weedy species.
 - Original pipeline doi: [Plant-LncPipe](https://doi.org/10.1093/hr/uhae041) 
 - Pipeline GitHub: [Plant-LncRNA-pipeline-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2)
