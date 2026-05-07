@@ -1,0 +1,21 @@
+#!/bin/bash --login
+#SBATCH --job-name=bam_index
+#SBATCH --array=1-165
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=4G
+#SBATCH --time=01:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
+
+# 1. Paths
+LIST="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/sra_accessions/g.max_sra_IDs.txt"
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
+DATA_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/01_fastp"
+INDEX_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/Gmax_indexed"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/02_STAR"
+
+ml purge
+ml load SAMtools/1.19.2-GCC-13.2.0
+
+# 2. Index the BAM file
+echo "Indexing BAM for $ID..."
+samtools index ${OUT_DIR}/${ID}_Aligned.sortedByCoord.out.bam
