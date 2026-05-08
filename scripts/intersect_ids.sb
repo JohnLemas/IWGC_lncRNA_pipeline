@@ -29,8 +29,8 @@ mkdir -p $OUTDIR
 # Image
 IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/intersect_ids.sif" # singularity image that has the necessary dependencies to run the intersect_ids.R script.
 
-# Just pass the flags directly to the image
-cmd="singularity run $IMAGE -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $OUTPFX" # save run command
+# Pass the flags directly to the image
+cmd="singularity run $IMAGE -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $OUTPFX" # save run command in log file
 
 echo -e ">>> Running via Singularity Image...\n${cmd}\n"
 $cmd

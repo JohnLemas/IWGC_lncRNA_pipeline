@@ -17,16 +17,53 @@ sed -i 's/[species]/A.thaliana/g' /your/file/path/A.thaliana/02_scripts*sb
 - [CD-HIT](#cd-hit)
   - removes duplicate sequences from truth dataset
 - [CPAT plant](#cpat-plant)
-  - random forest Ml tool for lncRNA prediction
+  - Logistic regression Ml tool for lncRNA prediction
 - [DIAMOND](#diamond)
   - protein database homology search to eliminate candidates
-- [fastp template](#fastp-tempmlate)
+- [fastp](#fastp)
   - template `sbatch` script called by `fastp_wrapper.sh`
-- [fastp wrapper](#fastp-wrapper)
   - wrapper script to submit all raw `fastq` files for trimming
-- [FEELnc classifier](#feelnc-classifier)
-  - edits gtf entries for predicted lncRNAs to include classifications
-- [FEELnc filter](#feelnc-filter)
-  - linear model ML tool for lncRNA candidate identification
+- [FEELnc](#feelnc)
+  - Filter: decision tree ensemble ML tool for lncRNA candidate identification
+  - Classifier: edits gtf entries for predicted lncRNAs to include classifications
 - [Intersect IDs](#intersect-ids)
-  - Custom R script and sbatch script to combine outputs from all four Ml tools and from DIAMOND
+  - Custom R script and sbatch script to combine outputs from up to four Ml tools and from DIAMOND
+- [lncBoost](#lncboost)
+  -  XGBoost model - iterative ML 'gradient boosting' model
+- [lncFinder](#lncfinder)
+  - support vector machine (SVM) geometric Ml tool - good for finding patterns in nonlinear data
+  - image, r script, and sbatch script for this step
+- [Minimap2](#minimap2)
+  - mapping predictions against truth sequences for pipeline analysis
+---
+### Alignment array
+
+---
+### Bam indexing
+
+---
+### CD-HIT
+
+---
+### CPAT plant
+
+---
+### DIAMOND
+
+---
+### fastp
+
+---
+### FEELnc
+
+---
+### Intersect IDs
+
+---
+### lncBoost
+
+---
+### lncFinder
+
+---
+### Minimap2

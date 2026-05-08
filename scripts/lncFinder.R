@@ -1,20 +1,20 @@
 #!/usr/bin/env Rscript
 library(LncFinder)
-library(seqinr)
-library(parallel)
-library(e1071)
+library(seqinr) # read input fasta sequences
+library(parallel) # run in parallel
+library(e1071) # for SVM model (required by lncFinder)
 
 # ==========================================
 # SET PATHS
 # ==========================================
-input_fasta   <- "/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/04_gffread/soy_candidates.fasta"
-output_dir    <- "/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/08_lncFinder"
-output_csv    <- file.path(output_dir, "soy_lncFinder_wheat_model_results.csv")
+input_fasta   <- "/mnt/scratch/lemasjoh/BASF/[species]/03_output/04_gffread/[species]_candidates.fasta" # candidates from gffread
+output_dir    <- "/mnt/scratch/lemasjoh/BASF/[species]/03_output/08_lncFinder"
+output_csv    <- file.path(output_dir, "[species]_lncFinder_wheat_model_results.csv")
 
 cat(">>>LncFinder:\ninput data:\n\t", input_fasta,
-    "\n output file:\n\t", output_csv,
-    "\nRunning predictions with built-in wheat model..\n"
-    )
+  "\n output file:\n\t", output_csv,
+  "\nRunning predictions with built-in wheat model..\n"
+)
 
 # ==========================================
 # READ INPUT SEQUENCES
@@ -27,11 +27,11 @@ Seqs <- read.fasta(input_fasta, seqtype = "DNA")
 # ==========================================
 
 results <- lnc_finder(
-  Seqs, 
-  SS.features = FALSE, 
-  format = "DNA", 
-  frequencies.file = "wheat", 
-  svm.model = "wheat", 
+  Seqs,
+  SS.features = FALSE,
+  format = "DNA",
+  frequencies.file = "wheat",
+  svm.model = "wheat",
   parallel.cores = 32
 )
 
