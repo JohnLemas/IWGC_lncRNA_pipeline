@@ -1,0 +1,41 @@
+#!/bin/bash --login
+#SBATCH --job-name=fastp_all
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --time=02:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
+
+ID=$1
+SPECIES_DIR=$2 
+SCRATCH_BASE="/mnt/scratch/lemasjoh/BASF/RNA_central"
+
+# Set paths
+IN_DIR="$SCRATCH_BASE/$SPECIES_DIR/raw_fastq" 
+OUT_DIR="$SCRATCH_BASE/$SPECIES_DIR/03_output/01_fastp"
+mkdir -p "$OUT_DIR"
+
+ml purge
+ml load Miniforge3
+conda activate genomics
+
+# --- SMART SEQUENCING MODE CHECK ---
+if [ -f "${IN_DIR}/${ID}_2.fastq.gz" ]; then
+    echo "Processing $ID as PAIRED-END"
+    fastp \
+      -i "${IN_DIR}/${ID}_1.fastq.gz" \
+      -I "${IN_DIR}/${ID}_2.fastq.gz" \
+      -o "${OUT_DIR}/${ID}_1_trim.fastq.gz" \
+      -O "${OUT_DIR}/${ID}_2_trim.fastq.gz" \
+      --detect_adapter_for_pe \
+      --thread 8 -x -g \
+      --html "${OUT_DIR}/${ID}_fastp.html" \
+      --json "${OUT_DIR}/${ID}_fastp.json"
+else
+    echo "Processing $ID as SINGLE-END"
+    fastp \
+      -i "${IN_DIR}/${ID}.fastq.gz" \
+      -o "${OUT_DIR}/${ID}_trim.fastq.gz" \
+      --thread 8 -x -g \
+      --html "${OUT_DIR}/${ID}_fastp.html" \
+      --json "${OUT_DIR}/${ID}_fastp.json"
+fi

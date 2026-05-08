@@ -1,0 +1,42 @@
+#!/bin/bash --login
+#SBATCH --job-name=soy_sra_fetch
+#SBATCH --array=1-182
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+#SBATCH --time=02:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
+
+# Paths
+LIST="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/sra_accessions/EV_datasets/sra_accessions.txt"
+OUTDIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/raw_fastq"
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
+
+mkdir -p $OUTDIR
+
+ml purge
+ml load SRA-Toolkit
+
+echo "Processing ID: $ID"
+
+# 1. Run Prefetch (only if not already downloaded)
+prefetch $ID
+
+# 2. Run fasterq-dump
+# --skip-technical: only keep biological reads
+echo "Starting fasterq-dump for $ID..."
+fasterq-dump $ID \
+    --outdir $OUTDIR \
+    --split-files \
+    --skip-technical \
+    --threads $SLURM_CPUS_PER_TASK \
+    --temp /tmp
+
+# 3. Gzip the results
+if [ $? -eq 0 ]; then
+    echo "Conversion complete. Compressing files..."
+    gzip $OUTDIR/${ID}*.fastq
+
+else
+    echo "fasterq-dump failed for $ID"
+    exit 1
+fi
