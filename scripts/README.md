@@ -19,7 +19,7 @@ sed -i 's/[species]/A.thaliana/g' /your/file/path/A.thaliana/02_scripts*sb
 - [CPAT plant](#cpat-plant)
   - random forest Ml tool for lncRNA prediction
 - [DIAMOND](#diamond)
-  - sequence homology
+  - protein database homology search to eliminate candidates
 - [fastp template](#fastp-tempmlate)
   - template `sbatch` script called by `fastp_wrapper.sh`
 - [fastp wrapper](#fastp-wrapper)
@@ -28,4 +28,5 @@ sed -i 's/[species]/A.thaliana/g' /your/file/path/A.thaliana/02_scripts*sb
   - edits gtf entries for predicted lncRNAs to include classifications
 - [FEELnc filter](#feelnc-filter)
   - linear model ML tool for lncRNA candidate identification
-- 
+- [Intersect IDs](#intersect-ids)
+  - Custom R script and sbatch script to combine outputs from all four Ml tools and from DIAMOND

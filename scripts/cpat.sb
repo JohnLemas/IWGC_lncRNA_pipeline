@@ -11,7 +11,7 @@ IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/cpat_plant.sif"# path to cpat image bu
 SEQS="/mnt/scratch/lemasjoh/BASF/[species]/03_output/04_gffread/[species]_candidates.fasta" # fasta file obtained from gffread -w [species]_candidates.fasta -g [species]_genome.fa [species]_candidates.gtf
 HEX="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/Plant_Hexamer.tsv" # this is the hexamer table provided by Plant-LncPipe Github Repo
 LOGIT="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/Plant.logit.RData" # also provided by Plant-LncPipe Github Repo
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/[species]/03_output/06_cpat"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/[species]/03_output/06_cpat"
 OUT_ALL="${OUT_DIR}/[species]_cpat.output"
 
 echo -e "..creating output directory:\n\t${OUT_DIR}"

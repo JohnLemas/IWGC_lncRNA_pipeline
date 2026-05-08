@@ -4,7 +4,10 @@ suppressPackageStartupMessages({
   library(optparse)
 })
 
-# 1. DEFINE ARGUMENTS
+# This custom script accepts outputs from multiple lncRNA prediction tools, extracts candidate IDs, and identifies the consensus set of candidates that pass all filters. It also generates a summary table indicating which candidates passed each tool's criteria.
+# This was designed to run with the intersect_ids.sif image.
+
+# 1. DEFINE ARGUMENTS: arguments for each input and output used in the script.
 option_list <- list(
   make_option(c("-f", "--feelnc"), type="character", help="FEELnc GTF or TXT list"),
   make_option(c("-c", "--cpat"), type="character", help="CPAT output (TSV)"),
