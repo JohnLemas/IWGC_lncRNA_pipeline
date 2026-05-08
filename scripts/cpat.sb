@@ -1,23 +1,23 @@
 #!/bin/bash --login
-#SBATCH --job-name=soy_cpat_lnc
+#SBATCH --job-name=[species]_cpat
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
-#SBATCH --time=02:00:00
+#SBATCH --time=02:00:00 # based on 165 candidates. cpat is pretty fast
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.out
 
 # Paths
 echo -e ">>>CPAT-plant:\n..loading image and data.."
-IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/cpat_plant.sif"
-SEQS="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/04_gffread/soy_candidates.fasta"
-HEX="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/Plant_Hexamer.tsv"
-LOGIT="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/Plant.logit.RData"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/06_cpat"
-OUT_ALL="${OUT_DIR}/soy_cpat.output"
+IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/cpat_plant.sif"# path to cpat image built with singularity build -r cpat_plant.sif cpat_plant.def
+SEQS="/mnt/scratch/lemasjoh/BASF/[species]/03_output/04_gffread/[species]_candidates.fasta" # fasta file obtained from gffread -w [species]_candidates.fasta -g [species]_genome.fa [species]_candidates.gtf
+HEX="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/Plant_Hexamer.tsv" # this is the hexamer table provided by Plant-LncPipe Github Repo
+LOGIT="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/Plant.logit.RData" # also provided by Plant-LncPipe Github Repo
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/[species]/03_output/06_cpat"
+OUT_ALL="${OUT_DIR}/[species]_cpat.output"
 
 echo -e "..creating output directory:\n\t${OUT_DIR}"
 mkdir -p $OUT_DIR
 
-echo -e ">>>CPAT-plant:\n.raw input data:\n\t${SEQS}\nnumber of sequences\n\t$(grep -c ">" ${SEQS})\n"
+echo -e ">>>CPAT-plant:\n.raw input data:\n\t${SEQS}\nnumber of sequences\n\t$(grep -c ">" ${SEQS})\n" # log the input files and number of sequences
 
 # run CPAT-plant
 echo -e ">>>CPAT-plant:\n..running command on raw input data.." 
