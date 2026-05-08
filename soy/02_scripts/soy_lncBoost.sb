@@ -1,0 +1,32 @@
+#!/bin/bash --login
+#SBATCH --job-name=soy_lncBoost
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=64G
+#SBATCH --time=04:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+
+# --- Paths ---
+IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/plant_lnc_boost.sif"
+SCRIPT_DIR="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Script"
+MODEL="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model/PlantLncBoost_model.cb"
+
+INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/04_gffread/soy_candidates.fasta"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/07_lncBoost"
+FEATURE_CSV="${OUT_DIR}/soy_features.csv"
+FINAL_RESULTS="${OUT_DIR}/soy_predictions.txt"
+
+# --- STEP 1: Feature Extraction ---
+echo "Starting Feature Extraction..."
+singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
+    python3 ${SCRIPT_DIR}/Feature_extraction.py -i $INPUT_FASTA -o $FEATURE_CSV
+
+# --- STEP 2: Prediction ---
+echo "Starting Prediction..."
+singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
+    python3 ${SCRIPT_DIR}/PlantLncBoost_prediction.py \
+    -i $FEATURE_CSV \
+    -m $MODEL \
+    -o $FINAL_RESULTS \
+    -t 0.5
+
+echo "Pipeline complete. Results are in $FINAL_RESULTS"
