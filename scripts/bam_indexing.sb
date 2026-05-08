@@ -1,17 +1,17 @@
 #!/bin/bash --login
 #SBATCH --job-name=bam_index
-#SBATCH --array=1-165
+#SBATCH --array=1-[# of samples] # wc -l [species]_sra_IDs.txt to get the number of samples
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=4G
-#SBATCH --time=01:00:00
+#SBATCH --time=01:00:00 # for 165 samples
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
 
 # 1. Paths
-LIST="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/sra_accessions/g.max_sra_IDs.txt"
-ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
-DATA_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/01_fastp"
-INDEX_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/Gmax_indexed"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/02_STAR"
+LIST="/mnt/scratch/lemasjoh/BASF/[species]/01_inputs/sra_accessions/[species]_sra_IDs.txt"
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST) # pulls the sra accession for the current array task ID
+DATA_DIR="/mnt/scratch/lemasjoh/BASF/[species]/03_output/01_fastp" # this is where the trimmed fastq files are located, which should be named according to the logic below (e.g., SRR1234567_1_trim.fastq.gz for paired-end or SRR1234567_trim.fastq.gz for single-end)
+INDEX_DIR="/mnt/scratch/lemasjoh/BASF/[species]/01_input/[species]_indexed" # indexed genome from star_genomegeneratete.sb script
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/[species]/03_output/02_STAR" # this is where the STAR output will go, which will be organized by sample ID (e.g., SRR1234567_Aligned.sortedByCoord.out.bam)
 
 ml purge
 ml load SAMtools/1.19.2-GCC-13.2.0
