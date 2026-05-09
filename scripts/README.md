@@ -44,13 +44,81 @@ sed -i 's/[species]/A.thaliana/g' /your/file/path/A.thaliana/02_scripts*sb
   - Merge: merges individual gtf files into one *de novo* transcriptome for the species
 ---
 ### Alignment array
+INPUTS
+- STAR indexed genome
+- trimmed reads
+- SRA accession list
 
+COMMAND
+```bash
+STAR \
+    --runThreadN $SLURM_CPUS_PER_TASK \
+    --genomeDir $INDEX_DIR \
+    --readFilesIn $READS \
+    --readFilesCommand zcat \
+    --outFileNamePrefix ${OUT_DIR}/${ID}_ \
+    --outSAMtype BAM SortedByCoordinate \
+    --outSAMattrIHstart 0 \
+    --outSAMattributes NH HI AS nM NM \
+    --outSAMstrandField intronMotif
+```
+FLAGS
+ Flags
+- outSAMattrIHstart 0
+  - required for compatibility with certain older tools or specific pipelines that expect 0-based indexing for multi-mappers
+- outSAMattributes
+  - NH: Number of reported alignments for the query
+  - HI: Query hit index (distinguishes multiple alignments of the same read)
+  - AS: Alignment score
+  - nM: Number of mismatches
+  - NM: Edit distance to the reference (including insertions and deletions).
+- outSAMstrandField
+  - intronMotif is used for strand-specific RNA-seq data, which is common in eukaryotic transcriptomics
+  - It helps STAR to correctly assign reads to the appropriate strand based on the presence of canonical splice motifs (GT/AG, GC/AG, AT/AC) at intron-exon boundaries
+  - This is crucial for accurate gene expression quantification and downstream analyses.
+
+SLURM NOTES
+- cpus-per-task=8
+- mem=64G
+- time=07:00:00
+  - based on 160 sra accessions
 ---
 ### Bam indexing
+INPUTS
+- STAR indexed genome
+- trimmed reads
+- SRA accession list
 
+COMMAND
+```bash
+samtools index ${OUT_DIR}/${ID}_Aligned.sortedByCoord.out.bam
+```
+
+NOTES
+- very light on resources
+  - 1 cpu, 4 G, 1 hour
 ---
 ### CD-HIT
+INPUTS
+- the combined list of all sequences in the 'truth' dataset
 
+COMMAND
+```bash
+cd-hit -i ${INPUT} -o ${OUTPUT} -c 0.9 -M 800 -T 8 -l 200
+```
+FLAGS
+- -c
+  - sequence identity threshold, default 0.9
+- -M
+  - memory limit (in MB) for the program, default 800; 0 for unlimitted
+- -T
+  - number of threads, default 1; with 0, all CPUs will be used
+- -l
+  - length of throw_away_sequences, default 10
+
+NOTES
+- very fast
+  - 8 cpu, 1 G and 2 hours
 ---
 ### CPAT plant
 Model: Logistic regression
@@ -122,7 +190,13 @@ SLURM NOTES
 - 2 hours for soy (works surprisingly fast- like, minutes)
 ---
 ### fastp
+INPUTS
 
+COMMAND
+
+FLAGS
+
+NOTES
 ---
 ### FEELnc
 Model: Decision tree ensemble
@@ -167,7 +241,13 @@ SLURM NOTES
 - 4 hours for the 98,984 soy candidates
 ---
 ### Intersect IDs
+INPUTS
 
+COMMAND
+
+FLAGS
+
+NOTES
 ---
 ### lncBoost
 Model: XGBoost
@@ -307,13 +387,31 @@ SLURM NOTES
   - HUGE NOTE: if having lncFinder fold seqs you'll need WAY more time
 ---
 ### Minimap2
+INPUTS
 
+COMMAND
+
+FLAGS
+
+NOTES
 ---
 ### Prefetch array
+INPUTS
 
+COMMAND
+
+FLAGS
+
+NOTES
 ---
 ### Genome generate
+INPUTS
 
+COMMAND
+
+FLAGS
+
+NOTES
 ---
 ### Stringtie
 stringtie transcriptome assembly and lncRNA candidate discovery
