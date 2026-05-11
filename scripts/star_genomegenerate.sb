@@ -1,5 +1,5 @@
 #!/bin/bash --login
-#SBATCH --job-name=soy_star_idx
+#SBATCH --job-name=species_star_idx
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=45G
@@ -7,9 +7,9 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
 
 # Paths
-GENOME="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/GmaxWm82ISU_01_724_v2.0.fa"
-ANNO="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/GmaxWm82ISU_01_724_v2.1.gene_exons.gff3"
-INDEX="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/Gmax_indexed"
+GENOME="/mnt/scratch/lemasjoh/BASF/species/01_input/genome/species_genome.fa"
+ANNO="/mnt/scratch/lemasjoh/BASF/species/01_input/genome/species.gtf"
+INDEX="/mnt/scratch/lemasjoh/BASF/species/01_input/genome/species_indexed"
 
 echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annotation:\n\t${ANNO}"
 

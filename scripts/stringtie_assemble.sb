@@ -1,19 +1,19 @@
 #!/bin/bash --login
-#SBATCH --job-name=soy_stringtie
+#SBATCH --job-name=species_stringtie
 #SBATCH --array=1-160
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/soy_stringtie/%x-%j_%A_%a.out
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
 
 # 1. Paths
-LIST="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/sra_accessions/g.max_sra_IDs.txt"
+LIST="/mnt/scratch/lemasjoh/BASF/species/01_inputs/species_sra_IDs.txt"
 ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
 
 # Input BAM directory
-BAM_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/02_STAR"
-REF_GTF="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/GmaxWm82ISU_01_724_v2.1.gene_exons.gtf"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/03_stringtie"
+BAM_DIR="/mnt/scratch/lemasjoh/BASF/species/03_output/02_STAR"
+REF_GTF="/mnt/scratch/lemasjoh/BASF/species/01_input/genome/species.gtf"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/species/03_output/03_stringtie/SRR_assemblies"
 
 mkdir -p $OUT_DIR
 
