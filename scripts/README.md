@@ -6,7 +6,7 @@ This direcotry contains all scripts used to predict and verify lncRNAs in a give
 ```bash
 # use a wild card to correct file paths and file names quickly for each sbatch script. Example:
 cp /your/file/path/scripts/* /your/file/path/A.thaliana/02_scripts
-sed -i 's/[species]/A.thaliana/g' /your/file/path/A.thaliana/02_scripts*sb
+sed -i 's/species/A.thaliana/g' /your/file/path/A.thaliana/02_scripts*sb
 ```
 ---
 ### Contents

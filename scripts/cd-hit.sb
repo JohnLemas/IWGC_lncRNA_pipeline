@@ -1,13 +1,13 @@
 #!/bin/bash --login
-#SBATCH --job-name=[species]_cd-hit
+#SBATCH --job-name=species_cd-hit
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=1G
 #SBATCH --time=02:00:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.out
 
 # Paths
-INPUT="/mnt/scratch/lemasjoh/BASF/[species]/truth_data/[species]_PLncDB_all.fasta" # this is the combined fasta of all lncRNA sequences from PLncDB for the species of interest
-OUTPUT="/mnt/scratch/lemasjoh/BASF/[species]/truth_data/[species]_PLncDB_all_cd-hit.0.9.fasta" # this is the output fasta file that will contain the representative sequences after clustering with CD-HIT at 90% identity
+INPUT="/mnt/scratch/lemasjoh/BASF/species/truth_data/species_PLncDB_all.fasta" # this is the combined fasta of all lncRNA sequences from PLncDB for the species of interest
+OUTPUT="/mnt/scratch/lemasjoh/BASF/species/truth_data/species_PLncDB_all_cd-hit.0.9.fasta" # this is the output fasta file that will contain the representative sequences after clustering with CD-HIT at 90% identity
 
 # module
 ml purge

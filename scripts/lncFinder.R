@@ -7,9 +7,9 @@ library(e1071) # for SVM model (required by lncFinder)
 # ==========================================
 # SET PATHS
 # ==========================================
-input_fasta   <- "/mnt/scratch/lemasjoh/BASF/[species]/03_output/04_gffread/[species]_candidates.fasta" # candidates from gffread
-output_dir    <- "/mnt/scratch/lemasjoh/BASF/[species]/03_output/08_lncFinder"
-output_csv    <- file.path(output_dir, "[species]_lncFinder_wheat_model_results.csv")
+input_fasta   <- "/mnt/scratch/lemasjoh/BASF/species/03_output/04_gffread/species_candidates.fasta" # candidates from gffread
+output_dir    <- "/mnt/scratch/lemasjoh/BASF/species/03_output/08_lncFinder"
+output_csv    <- file.path(output_dir, "species_lncFinder_wheat_model_results.csv")
 
 cat(">>>LncFinder:\ninput data:\n\t", input_fasta,
   "\n output file:\n\t", output_csv,

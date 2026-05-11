@@ -1,5 +1,5 @@
 #!/bin/bash --login
-#SBATCH --job-name=[species]_intersect
+#SBATCH --job-name=species_intersect
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64
 #SBATCH --time=1:00:00
@@ -10,17 +10,17 @@ export LC_ALL=C
 export LANG=C
 
 # Input files. script can run with at least two of the tools, and works with gtf and txt files.
-FEELnc="/mnt/scratch/lemasjoh/BASF/[species]/03_output/05_FEELnc/[species]_FEELnc.gtf"
-CPAT="/mnt/scratch/lemasjoh/BASF/[species]/03_output/06_cpat/[species]_cpat.output"
-lncBoost="/mnt/scratch/lemasjoh/BASF/[species]/03_output/07_lncBoost/[species]_predictions.txt"
-lncFinder="/mnt/scratch/lemasjoh/BASF/[species]/03_output/08_lncFinder/[species]_lncFinder_wheat_model_results.csv"
-DIAMOND="/mnt/scratch/lemasjoh/BASF/[species]/03_output/09_diamond/[species]_diamond_out.txt"
+FEELnc="/mnt/scratch/lemasjoh/BASF/species/03_output/05_FEELnc/species_FEELnc.gtf"
+CPAT="/mnt/scratch/lemasjoh/BASF/species/03_output/06_cpat/species_cpat.output"
+lncBoost="/mnt/scratch/lemasjoh/BASF/species/03_output/07_lncBoost/species_predictions.txt"
+lncFinder="/mnt/scratch/lemasjoh/BASF/species/03_output/08_lncFinder/species_lncFinder_wheat_model_results.csv"
+DIAMOND="/mnt/scratch/lemasjoh/BASF/species/03_output/09_diamond/species_diamond_out.txt"
 
 echo -e ">>>Final intersect:\nInput files:\n${FEELnc}\n${CPAT}\n${lncFinder}\n${lncBoost}\n${DIAMOND}\n...\n"
 
 # Output files
-OUTDIR="/mnt/scratch/lemasjoh/BASF/[species]/03_output/10_final"
-OUTPFX="${OUTDIR}/[species]_" # set the filename prefix for the output files
+OUTDIR="/mnt/scratch/lemasjoh/BASF/species/03_output/10_final"
+OUTPFX="${OUTDIR}/species_" # set the filename prefix for the output files
 
 echo -e ">>>Final intersect:\nMaking output directory:\n${OUTDIR}\n...\n"
 
