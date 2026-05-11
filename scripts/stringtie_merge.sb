@@ -6,9 +6,9 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.out
 
 # 1. Paths
-ID_FILE="/mnt/scratch/lemasjoh/BASF/species/01_inputs /species_sra_IDs.txt"
+ID_FILE="/mnt/scratch/lemasjoh/BASF/species/01_inputs/species_sra_IDs.txt"
 GTF_DIR="/mnt/scratch/lemasjoh/BASF/species/03_output/03_stringtie/SRR_assemblies"
-REF_GTF="/mnt/scratch/lemasjoh/BASF/species/01_input/genome/species.gtf"
+REF_GTF="/mnt/scratch/lemasjoh/BASF/species/01_input/species_mRNA.gtf"
 OUT_GTF="/mnt/scratch/lemasjoh/BASF/species/03_output/03_stringtie/species_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array

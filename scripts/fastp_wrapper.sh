@@ -19,8 +19,4 @@ submit_batch() {
     done < "$LIST_FILE"
 }
 
-# Run for Soy
-submit_batch "/mnt/scratch/lemasjoh/BASF/RNA_central/soy/sra_accessions/g.max_all_accessions.txt" "soy"
-
-# Run for Corn
-submit_batch "/mnt/scratch/lemasjoh/BASF/RNA_central/corn/sra_accessions/z.mays_all_accessions.txt" "corn"
+submit_batch "/mnt/scratch/lemasjoh/BASF/species/species_sra_IDs.txt" "species"

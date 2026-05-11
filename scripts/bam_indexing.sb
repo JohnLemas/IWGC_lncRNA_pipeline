@@ -7,7 +7,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
 
 # 1. Paths
-LIST="/mnt/scratch/lemasjoh/BASF/species/01_inputs/sra_accessions/species_sra_IDs.txt"
+LIST="/mnt/scratch/lemasjoh/BASF/species/01_inputs/species_sra_IDs.txt"
 ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST) # pulls the sra accession for the current array task ID
 DATA_DIR="/mnt/scratch/lemasjoh/BASF/species/03_output/01_fastp" # this is where the trimmed fastq files are located, which should be named according to the logic below (e.g., SRR1234567_1_trim.fastq.gz for paired-end or SRR1234567_trim.fastq.gz for single-end)
 INDEX_DIR="/mnt/scratch/lemasjoh/BASF/species/01_input/species_indexed" # indexed genome from star_genomegeneratete.sb script
