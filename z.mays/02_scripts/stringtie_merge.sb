@@ -1,15 +1,15 @@
 #!/bin/bash --login
-#SBATCH --job-name=soy_merge
+#SBATCH --job-name=z.mays_merge
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/soy_stringtie/%x-%j.out
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.out
 
 # 1. Paths
-ID_FILE="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/sra_accessions/g.max_sra_IDs.txt"
-GTF_DIR="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/03_stringtie/SRR_assemblies"
-REF_GTF="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/01_input/genome/GmaxWm82ISU_01_724_v2.1.gene_exons.gtf"
-OUT_GTF="/mnt/scratch/lemasjoh/BASF/RNA_central/soy/03_output/03_stringtie/soy_denovo_trans.gtf"
+ID_FILE="/mnt/scratch/lemasjoh/BASF/z.mays/01_inputs /z.mays_sra_IDs.txt"
+GTF_DIR="/mnt/scratch/lemasjoh/BASF/z.mays/03_output/03_stringtie/SRR_assemblies"
+REF_GTF="/mnt/scratch/lemasjoh/BASF/z.mays/01_input/genome/z.mays.gtf"
+OUT_GTF="/mnt/scratch/lemasjoh/BASF/z.mays/03_output/03_stringtie/z.mays_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array
 mapfile -t SRA_IDS < "$ID_FILE"
