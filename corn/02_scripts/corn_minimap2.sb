@@ -1,0 +1,58 @@
+#!/bin/bash --login
+#SBATCH --job-name=corn_minimap2
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+#SBATCH --time=00:30:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
+
+echo -e "\n\tload files..\n"
+
+# Paths
+PRED="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/10_final/corn_lncRNA.fasta"
+TRUTH="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/truth_data/PLncDB/Z.may_PLncDB_all_cd-hit.0.9.fasta"
+OUTDIR="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/11_testing"
+OUT_FILE="${OUTDIR}/Z.mays_PLncDB_cd-hit-0.9_vs_pred.paf"
+
+mkdir -p $OUTDIR
+
+echo -e "\n\tload module..\n"
+
+ml purge
+ml load minimap2
+
+cmd="minimap2 -x cdna -t 8 $TRUTH $PRED -o $OUT_FILE"
+
+echo -e "\n\trun command:\n${cmd}\n"
+
+$cmd
+
+# Total ML Predictions
+TOTAL_PRED=$(grep -c ">" ${PRED})
+
+echo -e "Total predicted lncRNAs:\n\t${TOTAL_PRED}\n"
+
+# Count unique ML IDs that matched the Truth with >95% identity
+TP=$(awk '{if($10/$11 > 0.95) print $1}' $OUT_FILE | sort -u | wc -l)
+
+echo -e "Predicted IDs that matched the ${TRUTH} dataset:\n\t${TP}\n"
+
+# FP = Total - TP
+FP=$((TOTAL_PRED - TP))
+
+echo -e "False Positives:\n\t${FP}\n"
+
+# Count how many Truth IDs were actually hit by the ML predictions
+HIT_TRUTH=$(awk '{if($10/$11 > 0.95) print $6}' $OUT_FILE | sort -u | wc -l)
+
+echo -e "number of EV sequences that were hit by predictions:\n\t${HIT_TRUTH}\n"
+
+# Total Truth Sequences
+TOTAL_TRUTH=$(grep -c ">" ${TRUTH})
+
+echo -e "Number of EV sequences:\n\t${TOTAL_TRUTH}\n"
+
+# FN = Total Truth - Hit Truth
+FN=$((TOTAL_TRUTH - HIT_TRUTH))
+
+echo -e "False negatives:\n\t${FN}\n"

@@ -1,0 +1,39 @@
+#!/bin/bash --login
+#SBATCH --job-name=corn_intersect
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8
+#SBATCH --time=1:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+
+# Input files
+FEELnc="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/05_FEELnc/corn_FEELnc.txt"
+CPAT="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/06_cpat/corn_cpat.output"
+lncBoost="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/07_lncBoost/corn_predictions.txt"
+lncFinder="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/08_lncFinder/corn_lncFinder_wheat_model_results.csv"
+DIAMOND="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/09_diamond/corn_diamond_out.txt"
+
+# script
+SCRIPT="/mnt/home/lemasjoh/Documents/BASF_scripts/intersect_ids.R"
+
+echo -e ">>>Final intersect:\nInput files:\n${FEELnc}\n${CPAT}\n${lncFinder}\n${lncBoost}\n${DIAMOND}\n...\n"
+
+# Output files
+OUTDIR="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/10_final"
+OUTPFX="${OUTDIR}/corn_"
+
+echo -e ">>>Final intersect:\n...making output directory:\n${OUTDIR}\n...\n"
+
+mkdir -p $OUTDIR
+
+# Load module
+ml purge
+ml load R
+
+# Run command:
+cmd="Rscript $SCRIPT -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $OUTPFX"
+
+echo -e ">>>Final intersect:\nRun command:\n${cmd}\n...\n"
+
+$cmd
+
+echo -e ">>>Final intersect:\nIntersection complete.\nlncRNA IDs:\n${OUTPFX}_final_ids.txt\nTool summary:\n${OUTPFX}_intersection_summary.csv\n"

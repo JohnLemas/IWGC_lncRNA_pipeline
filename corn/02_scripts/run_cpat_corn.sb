@@ -1,0 +1,26 @@
+#!/bin/bash --login
+#SBATCH --job-name=corn_cpat
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --time=03:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+
+# 1. Paths to your cloned repo files (UPDATE THESE to your actual clone path)
+REPO_DIR="/mnt/scratch/lemasjoh/BASF/scripts/Plant-LncRNA-pipeline-v2/Model"
+LOGIT="${REPO_DIR}/Plant.logit.RData"
+HEXAMER="${REPO_DIR}/Plant_Hexamer.tsv"
+
+# 2. Input/Output Paths
+IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/plant_lnc.sif"
+FASTA="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/04_gffread/corn_candidates.fasta"
+OUT_PREFIX="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/03_output/05_cpat"
+
+mkdir -p $OUT_PREFIX
+
+# 3. Run CPAT
+# Note: Ensure the flags -d and -r match the file types
+singularity exec $IMAGE cpat.py \
+    -g $FASTA \
+    -d $LOGIT \
+    -x $HEXAMER \
+    -o $OUT_PREFIX/cpat_out.txt

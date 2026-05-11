@@ -1,0 +1,14 @@
+#!/bin/bash --login
+#SBATCH --job-name=LncFinder_Corn
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=64G
+#SBATCH --time=4:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+
+# Paths
+IMAGE="/mnt/scratch/lemasjoh/BASF/scripts/lncfinder.sif"
+RSCRIPT="/mnt/scratch/lemasjoh/BASF/RNA_central/corn/02_scripts/corn_lncFinder.R"
+
+# Run the R script inside the container
+singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
+    Rscript $RSCRIPT
