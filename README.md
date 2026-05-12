@@ -62,16 +62,20 @@
 1. Prep the reference genome
 ```bash
 # First, double check chromosome designations in the reference genome
-grep ">" species.fa
-cut -f 1 species_mRNA.gffs | sort | uniq
-# If needed, use sed to ensure consistent naming
+grep ">" species.chromosomes.fa # downloaded from PLncDB. Also make note of extra scaffolds for the next step.
+cut -f 1 species.gene.gff3 | sort | uniq # If needed, use sed or awk to ensure consistent naming
+
+# Second, index the chromosomes out of the greater assembly to remove excess noise during alignments
+ml purge
+ml load SeqKit
+seqkit grep -v -r -p "scaffold|contig|Pt|Mt|ctg" species.chromosomes.fa > species.fa 
 ```
 
 2. Annotation must be in gtf format for stringtie
 ```bash
 ml purge
 ml load gffread
-gffread -T -o species_mRNA.gtf species_mRNA.gff3
+gffread -T -o species_mRNA.gtf species.gene.gff3
 ```
 
 3. Create the UniProt database for DIAMOND
