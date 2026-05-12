@@ -48,14 +48,14 @@
 - Navigate to [PLncDB](https://www.tobaccodb.org/plncdb/)
 - Gather PMID information from the RNA-Seq table for a given species
   - Use EDirect to gather SRA accession numbers from PMIDs; save as list `species_sra_IDs.txt`
-- Gather truth and reference genome data from the downloads tab on PLncDB
+- Gather truth sequences and the reference genome from the downloads>species page on PLncDB
   - Download the lncRNA fasta files, the genome, and all of the gff3 files
   - rename the genome `species.fa` and the annotation `species_mRNA.gff3`
 - Create working directory
   - Clone this repository. Clone [Plant-lncPipe](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2) and [FEELnc](https://github.com/tderrien/feelnc) into the scripts directory.
   - use `singularity build` to build images from `def_files`
   - Create the working directory for the species
-  - Copy the scripts into `species/02_scripts` and run the `sed`  command
+  - Copy scripts into `species/02_scripts` and run the `sed`  command (see `scripts/README.md`)
   - make sure `species_sra_IDs.txt`, `species.fa`, and `species_mRNA.gff3` are in the `species/01_inputs` directory
 ---
 ### Set-up

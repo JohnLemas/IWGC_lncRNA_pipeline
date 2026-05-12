@@ -4,5 +4,4 @@ These data were gathered from [PLncDB](https://www.tobaccodb.org/plncdb/) and re
 cat *.fa >> species_PLncDB_lncRNA.fa
 cat *.gff3 >> species_PLncDB_lncRNA.gff3
 grep -c ">" species_PLncDB_lncRNA.fa # number of truth sequences in raw dataset
-
 ```
