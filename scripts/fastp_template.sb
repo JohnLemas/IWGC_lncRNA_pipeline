@@ -7,7 +7,7 @@
 
 ID=$1
 SPECIES_DIR=$2 
-SCRATCH_BASE="/mnt/scratch/lemasjoh/BASF"
+SCRATCH_BASE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline"
 
 # Set paths
 IN_DIR="$SCRATCH_BASE/$SPECIES_DIR/01_input/raw_fastq" 

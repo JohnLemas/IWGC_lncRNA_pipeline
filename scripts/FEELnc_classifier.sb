@@ -6,11 +6,11 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # 1. Paths to your files
-IMG="/mnt/scratch/lemasjoh/BASF/scripts/FEELnc2.sif"
-FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/scripts/FEELnc"
-LNC_GTF="/mnt/scratch/lemasjoh/BASF/species/03_output/10_final/species_lncRNA.gtf"
-mRNA_GTF="/mnt/scratch/lemasjoh/BASF/species/01_input/species_mRNA.gtf"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/species/03_output/10_final"
+IMG="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc2.sif"
+FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc"
+LNC_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/10_final/species_lncRNA.gtf"
+mRNA_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_mRNA.gtf"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/10_final"
 
 # 2. Run the classifier
 # We use --env to pass the library path INTO the container

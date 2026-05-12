@@ -7,9 +7,9 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
 
 # Paths
-GENOME="/mnt/scratch/lemasjoh/BASF/species/01_input/species_genome.fa"
-ANNO="/mnt/scratch/lemasjoh/BASF/species/01_input/species_mRNA.gtf"
-INDEX="/mnt/scratch/lemasjoh/BASF/species/01_input/species_indexed"
+GENOME="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_genome.fa"
+ANNO="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_mRNA.gtf"
+INDEX="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_indexed"
 
 echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annotation:\n\t${ANNO}"
 

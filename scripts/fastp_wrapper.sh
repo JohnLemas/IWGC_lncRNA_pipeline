@@ -19,4 +19,4 @@ submit_batch() {
     done < "$LIST_FILE"
 }
 
-submit_batch "/mnt/scratch/lemasjoh/BASF/species/species_sra_IDs.txt" "species"
+submit_batch "/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt" "species"

@@ -9,9 +9,9 @@
 echo -e "\n\tload files..\n"
 
 # Paths
-PRED="/mnt/scratch/lemasjoh/BASF/species/03_output/10_final/species_lncRNA.fasta" # Final candidates after running the intersection
-TRUTH="/mnt/scratch/lemasjoh/BASF/truth_data/species/species_cd-hit.0.9.fasta" # Truth dataset: EV sequences clustered at 90% identity with cd-hit. 
-OUTDIR="/mnt/scratch/lemasjoh/BASF/species/03_output/11_verify"
+PRED="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/10_final/species_lncRNA.fasta" # Final candidates after running the intersection
+TRUTH="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/truth_data/species/species_cd-hit.0.9.fasta" # Truth dataset: EV sequences clustered at 90% identity with cd-hit. 
+OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/11_verify"
 OUT_FILE="${OUTDIR}/species_cd-hit-0.9_vs_pred.paf"
 
 echo -e "\n\tload module..\n"
