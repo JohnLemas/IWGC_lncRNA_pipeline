@@ -12,6 +12,7 @@
 - [Working Directory](#working-directory)
 - [General overview](#general-overview)
 - [Gathering inputs](#gathering-inputs)
+- [Set-up commands](#set-up-commands)
 ---
 ## Working Directory
 - def_files
@@ -28,9 +29,11 @@
     - all necessary scripts copied from parent script directory (edited using `sed`; see scripts dir)
   - 03_outputs
     - outputs from all 10 steps
+- truth_data
+  - lncRNA datasets gathered from [PLncDB](https://www.tobaccodb.org/plncdb/)
  ---
 ## General overview
-1. Obtain 'truth' dataset from PLncDB for a given speices
+1. Obtain 'truth' dataset from [PLncDB](https://www.tobaccodb.org/plncdb/) for a given speices
 2. get a list of pmids associated with the rna-seq projects under the species tab in PLncDB
 3. Use EDirect and SRA-Toolkit to get raw data from each of these projects
 4. Download a reference genome and annotation file
@@ -55,22 +58,28 @@
   - Copy the scripts into `species/02_scripts` and run the `sed`  command
   - make sure `species_sra_IDs.txt`, `species.fa`, and `species_mRNA.gff3` are in the `species/01_inputs` directory
 ---
-### Set-up commands
-1. prepping the reference genome
+### Set-up
+1. Prep the reference genome
 ```bash
 # First, double check chromosome designations in the reference genome
 grep ">" species.fa
 cut -f 1 species_mRNA.gffs | sort | uniq
 # If needed, use sed to ensure consistent naming
-# Annotation must be in gtf format for stringtie
+```
+
+2. Annotation must be in gtf format for stringtie
+```bash
 ml purge
 ml load gffread
 gffread -T -o species_mRNA.gtf species_mRNA.gff3
 ```
-2. Create the UniProt database for DIAMOND
+
+3. Create the UniProt database for DIAMOND
 ```bash
 wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
 gunzip uniprot_sprot.fasta.gz
 diamond makedb --in uniprot_sprot.fasta -d uniprot_out
 ```
-3. Double check paths for `star_genomegenerate.sb`
+
+4. Double check paths for `star_genomegenerate.sb` then index the genome into `species/01_inputs/species_indexed`
+
