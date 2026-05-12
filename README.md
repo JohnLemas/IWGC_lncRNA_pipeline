@@ -3,10 +3,15 @@
 ### John Lemas
 ### 5-6-2025
 ---
+## Citation
+ This pipeline was originally developed by Xue-Chan Tian *et al*:
+ Original publication:[DOI](https://doi.org/10.1093/hr/uhae041)
+ Author GitHub:[Plant-LncPipe-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2/tree/master)
+---
 ### Table of contents
 - [Working Directory](#working-directory)
 - [General overview](#general-overview)
-- [Citation](*citation)
+- [Gathering inputs](#gathering-inputs)
 ---
 ## Working Directory
 - def_files
@@ -14,18 +19,15 @@
 - scripts
   - sbatch script templates for hpcc
   - custom scripts for the pipeline
-- corn
+- species
   - 01_inputs
+    - pmid metadata
+    - list of sra IDs saved as `species_sra_IDs.txt`
+    - reference genome (`species.fa`) and annotation (`species_mRNA.gtf)
   - 02_scripts
+    - all necessary scripts copied from parent script directory (edited using `sed`; see scripts dir)
   - 03_outputs
-- A.thaliana
-  - 01_inputs
-  - 02_scripts
-  - 03_outputs
-- soy
-  - 01_inputs
-  - 02_scripts
-  - 03_outputs
+    - outputs from all 10 steps
  ---
 ## General overview
 1. Obtain 'truth' dataset from PLncDB for a given speices
@@ -39,7 +41,36 @@
 9. intersect IDs that passed each tool to pbtain high-confidence lncRNAs
 10. use sequence alignment to compare high-confidence candidates to 'truth' dataset
  ---
- ## Citation
- This pipeline was originally developed by Xue-Chan Tian *et al*:
- Original publication:[DOI](https://doi.org/10.1093/hr/uhae041)
- Author GitHub:[Plant-LncPipe-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2/tree/master)
+### Gathering inputs
+- Navigate to [PLncDB](https://www.tobaccodb.org/plncdb/)
+- Gather PMID information from the RNA-Seq table for a given species
+  - Use EDirect to gather SRA accession numbers from PMIDs; save as list `species_sra_IDs.txt`
+- Gather truth and reference genome data from the downloads tab on PLncDB
+  - Download the lncRNA fasta files, the genome, and all of the gff3 files
+  - rename the genome `species.fa` and the annotation `species_mRNA.gff3`
+- Create working directory
+  - Clone this repository. Clone [Plant-lncPipe](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2) and [FEELnc](https://github.com/tderrien/feelnc) into the scripts directory.
+  - use `singularity build` to build images from `def_files`
+  - Create the working directory for the species
+  - Copy the scripts into `species/02_scripts` and run the `sed`  command
+  - make sure `species_sra_IDs.txt`, `species.fa`, and `species_mRNA.gff3` are in the `species/01_inputs` directory
+---
+### Set-up commands
+1. prepping the reference genome
+```bash
+# First, double check chromosome designations in the reference genome
+grep ">" species.fa
+cut -f 1 species_mRNA.gffs | sort | uniq
+# If needed, use sed to ensure consistent naming
+# Annotation must be in gtf format for stringtie
+ml purge
+ml load gffread
+gffread -T -o species_mRNA.gtf species_mRNA.gff3
+```
+2. Create the UniProt database for DIAMOND
+```bash
+wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+gunzip uniprot_sprot.fasta.gz
+diamond makedb --in uniprot_sprot.fasta -d uniprot_out
+```
+3. Double check paths for `star_genomegenerate.sb`
