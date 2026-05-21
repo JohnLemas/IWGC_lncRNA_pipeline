@@ -1,73 +1,86 @@
 #!/usr/bin/env python3
-import json
 import os
 import glob
 import sys
+import re
 
 # 1. Capture the species name from the command-line argument
 if len(sys.argv) < 2:
     print("Error: Missing species name argument!")
-    print("Usage: python3 universal_clean.py [species_name]")
-    print("Example: python3 universal_clean.py g.max")
+    print("Usage: python3 ncbi_datasets_cleanup.py [species_name]")
+    print("Example: python3 ncbi_datasets_cleanup.py g.max")
     sys.exit(1)
 
 species_prefix = sys.argv[1]
 
-print("Searching for NCBI dataset directory inside /data/GCF*...")
+print("Searching for NCBI dataset directory structure...")
 
-# 2. Automatically find the GCF dataset directory
+# 2. Find the local GCF dataset directory
 gcf_dirs = glob.glob("data/GCF*")
 
 if not gcf_dirs:
-    print("Error: Could not find any directory matching '/data/GCF*'!")
+    print("Error: Could not find any directory matching 'data/GCF*'!")
+    print(f"Current working directory is: {os.getcwd()}")
+    print("Are you standing inside the 'ncbi_dataset' folder?")
     sys.exit(1)
 
 target_dir = gcf_dirs[0]
 print(f"Found active genome directory: {target_dir}")
 
-# 3. Dynamically resolve file paths inside that directory
+# 3. Dynamically resolve file paths inside that specific GCF folder
 fasta_matches = glob.glob(os.path.join(target_dir, "*_genomic.fna"))
 input_fasta = fasta_matches[0] if fasta_matches else None
 input_gff = os.path.join(target_dir, "genomic.gff")
-seq_report_path = os.path.join(target_dir, "sequence_report.jsonl")
 
 # Safety check
 missing_files = []
 if not input_fasta: missing_files.append("*_genomic.fna")
 if not os.path.exists(input_gff): missing_files.append("genomic.gff")
-if not os.path.exists(seq_report_path): missing_files.append("sequence_report.jsonl")
 
 if missing_files:
     print(f"Error: Missing required files in {target_dir}: {', '.join(missing_files)}")
     sys.exit(1)
 
-# Define custom output paths using your exact naming specs
+# Define custom output paths using your naming specifications
 output_fasta = os.path.join(target_dir, f"{species_prefix}.chromosomes.fa")
 output_gff = os.path.join(target_dir, f"{species_prefix}_mRNA.gff")
 
-print(f"-> Using FASTA:          {os.path.basename(input_fasta)}")
-print(f"-> Using GFF:            {os.path.basename(input_gff)}")
-print(f"-> Target FASTA Output:  {os.path.basename(output_fasta)}")
-print(f"-> Target GFF Output:    {os.path.basename(output_gff)}")
+print(f"-> Found FASTA:          {os.path.basename(input_fasta)}")
+print(f"-> Found GFF:            {os.path.basename(input_gff)}")
+print(f"-> Target FASTA Output:  {output_fasta}")
+print(f"-> Target GFF Output:    {output_gff}")
 
-# --- Step 1: Build Chromosome Map ---
-print("\nStep 1: Parsing sequence report to map chromosomes...")
+# --- Step 1: Extract Chromosome Map directly from FASTA headers ---
+print("\nStep 1: Parsing FASTA headers to map primary chromosomes...")
 chr_mapping = {}
 
-with open(seq_report_path, 'r') as json_file:
-    for line in json_file:
-        data = json.loads(line)
-        if data.get("assignedMoleculeLocationType") == "assigned-molecule" and data.get("role") == "assembled-molecule":
-            refseq_acc = data.get("refseqAccession")
-            chr_name = data.get("chromosomeName")
-            
-            if refseq_acc and chr_name:
-                chr_mapping[refseq_acc] = f"chr{chr_name}"
+# Regex to find things like "chromosome 1" or "chromosome X" but ignore "unlocalized genomic scaffold"
+chrom_regex = re.compile(r"chromosome\s+([A-Za-z0-9]+)")
+
+with open(input_fasta, 'r') as infile:
+    for line in infile:
+        if line.startswith('>'):
+            header = line.strip()
+            # Skip unlocalized, unplaced, or organelle scaffolds explicitly
+            if "unlocalized" in header.lower() or "unplaced" in header.lower() or "mitochondrion" in header.lower() or "chloroplast" in header.lower():
+                continue
+                
+            # Search for the chromosome keyword and number
+            match = chrom_regex.search(header)
+            if match:
+                accession = header.split()[0].replace('>', '')
+                chrom_num = match.group(1)
+                chr_mapping[accession] = f"chr{chrom_num}"
 
 if not chr_mapping:
-    print("Warning: No primary chromosomes detected in the report data.")
+    print("Error: No primary chromosomes could be parsed from the FASTA headers!")
+    sys.exit(1)
 else:
     print(f"Success! Detected {len(chr_mapping)} main chromosomes.")
+    # Show a brief preview of what was found
+    preview = list(chr_mapping.items())[:3]
+    for acc, chrom in preview:
+        print(f"  Mapping: {acc} -> {chrom}")
 
 # --- Step 2: Clean FASTA ---
 print("\nStep 2: Filtering and renaming FASTA file...")
@@ -85,10 +98,10 @@ with open(input_fasta, 'r') as infile, open(output_fasta, 'w') as outfile:
             if write_sequence:
                 outfile.write(line)
 
-print(f"Saved: {output_fasta}")
+print(f"Saved: {os.path.basename(output_fasta)}")
 
-# --- Step 3: Clean GFF (Extracting mRNA lines only) ---
-print("\nStep 3: Filtering GFF to primary chromosomes and extracting mRNA features...")
+# --- Step 3: Clean GFF (Extracting transcript structures only) ---
+print("\nStep 3: Filtering GFF to primary chromosomes and extracting transcript structures...")
 with open(input_gff, 'r') as infile, open(output_gff, 'w') as outfile:
     for line in infile:
         if line.startswith('#'):
@@ -99,13 +112,11 @@ with open(input_gff, 'r') as infile, open(output_gff, 'w') as outfile:
         seqid = columns[0]
         feature_type = columns[2]
         
-        # Keep the line ONLY if it belongs to a core chromosome AND represents mRNA structures
-        # Note: We keep features of type 'mRNA', plus 'exon', 'CDS', 'five_prime_UTR', etc. 
-        # to ensure the transcript structures remain fully intact.
         if seqid in chr_mapping:
-            if feature_type in ['gene', 'mRNA', 'exon', 'CDS', 'five_prime_UTR', 'three_prime_UTR']:
+            # Captures standard structural elements of coding and non-coding transcripts for alignment accuracy
+            if feature_type in ['gene', 'mRNA', 'exon', 'CDS', 'five_prime_UTR', 'three_prime_UTR', 'lnc_RNA']:
                 columns[0] = chr_mapping[seqid]
                 outfile.write('\t'.join(columns))
 
-print(f"Saved: {output_gff}")
-print(f"\nProcessing complete! Outputs generated for string ID: '{species_prefix}'")
+print(f"Saved: {os.path.basename(output_gff)}")
+print(f"\nProcessing complete! Outputs generated successfully for string ID: '{species_prefix}'")
