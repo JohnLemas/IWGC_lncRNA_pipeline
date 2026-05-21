@@ -10,11 +10,11 @@ export LC_ALL=C
 export LANG=C
 
 # Input files. script can run with at least two of the tools, and works with gtf and txt files.
-FEELnc="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/05_FEELnc/species_FEELnc.gtf"
-CPAT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/06_cpat/species_cpat.output"
-lncBoost="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/07_lncBoost/species_predictions.txt"
-lncFinder="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/08_lncFinder/species_lncFinder_wheat_model_results.csv"
-DIAMOND="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/09_diamond/species_diamond_out.txt"
+FEELnc="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
+CPAT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/06_cpat/species_cpat.output"
+lncBoost="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/07_lncBoost/species_predictions.txt"
+lncFinder="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_wheat_model_results.csv"
+DIAMOND="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/09_diamond/species_diamond_out.txt"
 
 echo -e ">>>Final intersect:\nInput files:\n${FEELnc}\n${CPAT}\n${lncFinder}\n${lncBoost}\n${DIAMOND}\n...\n"
 

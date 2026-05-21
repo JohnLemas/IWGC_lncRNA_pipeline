@@ -11,9 +11,9 @@ LIST="/mnt/scratch/lemasjoh/BASF/species/01_inputs/species_sra_IDs.txt"
 ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
 
 # Input BAM directory
-BAM_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/02_STAR"
-REF_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_mRNA.gtf"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/03_stringtie/SRR_assemblies"
+BAM_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/02_STAR"
+REF_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/SRR_assemblies"
 
 mkdir -p $OUT_DIR
 

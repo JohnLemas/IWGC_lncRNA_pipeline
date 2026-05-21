@@ -7,9 +7,9 @@
 
 # 1. Paths
 ID_FILE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt"
-GTF_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/03_stringtie/SRR_assemblies"
-REF_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_mRNA.gtf"
-OUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/03_stringtie/species_denovo_trans.gtf"
+GTF_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/SRR_assemblies"
+REF_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
+OUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array
 mapfile -t SRA_IDS < "$ID_FILE"

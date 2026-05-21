@@ -7,9 +7,9 @@
 
 # 1. Paths
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc.sif"
-INPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/03_stringtie/species_candidates.gtf"
-REF_ANN="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_input/species_mRNA.gtf"
-OUTPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/05_FEELnc/species_FEELnc.gtf"
+INPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
+REF_ANN="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
+OUTPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
 FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc"
 
 # 2. Run it

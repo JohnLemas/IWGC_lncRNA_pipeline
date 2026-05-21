@@ -10,8 +10,8 @@ IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/plant_lnc_boost.s
 SCRIPT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/Plant-LncRNA-pipeline-v2/Script" # contains both Feature_extraction.py and PlantLncBoost_prediction.py
 MODEL="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/Plant-LncRNA-pipeline-v2/Model/PlantLncBoost_model.cb" # pre-trained model for plant lncRNA prediction
 
-INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/04_gffread/species_candidates.fasta" # input fasta file containing candidate lncRNA sequences
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/07_lncBoost"
+INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta" # input fasta file containing candidate lncRNA sequences
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/07_lncBoost"
 FEATURE_CSV="${OUT_DIR}/species_features.csv"
 FINAL_RESULTS="${OUT_DIR}/species_predictions.txt"
 
