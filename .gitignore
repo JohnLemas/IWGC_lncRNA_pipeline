@@ -6,3 +6,8 @@
 *sif
 *.DS_Store
 *gene_info.txt
+!/g.max/
+!/z.mays/
+/truth_data/
+/g.max/*
+/z.mays/*
