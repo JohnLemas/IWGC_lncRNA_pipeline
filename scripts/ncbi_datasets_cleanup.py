@@ -43,7 +43,7 @@ if missing_files:
 
 # Define custom output paths using your naming specifications
 output_fasta = os.path.join(target_dir, f"{species_prefix}.chromosomes.fa")
-output_gff = os.path.join(target_dir, f"{species_prefix}_mRNA.gff")
+output_gff = os.path.join(target_dir, f"{species_prefix}.gene.gff")
 
 print(f"-> Found FASTA:          {os.path.basename(input_fasta)}")
 print(f"-> Found GFF:            {os.path.basename(input_gff)}")
