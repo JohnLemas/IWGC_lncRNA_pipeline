@@ -2,11 +2,11 @@
 ### John Lemas
 ### 5-8-2026
 ---
-This direcotry contains all scripts used to predict and verify lncRNAs in a given species. Scripts can be copied into a species' sub-directory for editing.
+This directory contains all scripts used to predict and verify lncRNAs in a given species. Scripts can be copied into a species' sub-directory for editing.
 ```bash
 # use a wild card to correct file paths and file names quickly for each sbatch script. Example:
-cp /your/file/path/scripts/* /your/file/path/A.thaliana/02_scripts
-sed -i 's/species/A.thaliana/g' /your/file/path/A.thaliana/02_scripts/*
+cp IWGC_lncRNA_pipeline/scripts/* IWGC_lncRNA_pipeline/A.thaliana/02_scripts
+sed -i 's/species/A.thaliana/g' IWGC_lncRNA_pipeline/A.thaliana/02_scripts/*
 ```
 ---
 ### Contents
@@ -148,13 +148,8 @@ SLURM NOTES:
 - 2 hours for soy
 ---
 ### DIAMOND
-Double checks that any candidate transcripts do not match any known protein coding transcripts
-First it needs a pre-built database of known PCGs to refer to
-```bash
-wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
-gunzip uniprot_sprot.fasta.gz
-diamond makedb --in uniprot_sprot.fasta -d uniprot_out
-```
+Double checks that any candidate transcripts do not match any known protein coding transcripts. See main `README.md` for database set-up.
+
 Database path on hpcc: \
 `/mnt/scratch/lemasjoh/BASF/uniprot_db/uniprot_out.dmnd`
 
@@ -190,13 +185,20 @@ SLURM NOTES
 - 2 hours for soy (works surprisingly fast- like, minutes)
 ---
 ### fastp
+Cleans up raw `fastq` files from `prefetch_array.sb`. Trimmed reads are placed in the `species/03_outputs/01_fastp` directory. `fastp_wrapper.sh` and `fastp_template.sb` are designed to run without intervention. 
+
 INPUTS
+Raw `fastq` files from `prefetch_array.sb`
 
 COMMAND
-
+```bash
+bash fastp_wrapper.sh
+```
 FLAGS
 
 NOTES
+Might want to edit this step to work as an array instead of submitting all samples at once.
+
 ---
 ### FEELnc
 Model: Decision tree ensemble
@@ -241,13 +243,30 @@ SLURM NOTES
 - 4 hours for the 98,984 soy candidates
 ---
 ### Intersect IDs
-INPUTS
+Two scripts for this step: `intersect_ids.R` & `intersect_ids.sb`. The R script outputs a list of high confidence lncRNA IDs from `StringTie` and a table of concensus information for every submitted candidate.
+
+INPUTS \
+Designed to accept at least two outputs from any of the four tools. Fewer pipeline tools from the entire ensemble can be run if desired, or if a tool/model is not working. 
+
+- FEELnc output
+  - accepts either the raw `gtf` file or an indexed list of IDs
+- `CPAT` output in `tsv` format
+- `lncBoost` output in `tsv` format
+- `lncFinder` output in `csv` format
+- `DIAMOND` output in `tsv` format
+- output file prefix
+  - default is `concensus`
+
 
 COMMAND
-
+```bash
+singularity run $IMAGE -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $OUTPFX
+```
 FLAGS
 
 NOTES
+4 G mem, 1 hour, 4 threads
+
 ---
 ### lncBoost
 Model: XGBoost
@@ -388,30 +407,87 @@ SLURM NOTES
 ---
 ### Minimap2
 INPUTS
+- Predicted lncRNA sequences
+- condensed 'truth' dataset sequences
+- Output file pash
 
 COMMAND
-
+```bash
+minimap2 -x cdna -t 8 $TRUTH $PRED -o $OUT_FILE
+```
 FLAGS
+- -x
+  - sets the input sequence type
 
 NOTES
+Super fast! 32 G, 8 threads, 30 minutes
 ---
 ### Prefetch array
 INPUTS
+- List of SRA accessions
+- output directory
 
 COMMAND
+``` bash
+# 1. Run Prefetch (only if not already downloaded)
+prefetch $ID
 
+# 2. Run fasterq-dump
+echo "Starting fasterq-dump for $ID..."
+fasterq-dump $ID \
+    --outdir $OUTDIR \
+    --split-files \
+    --skip-technical \
+    --threads $SLURM_CPUS_PER_TASK \
+    --temp /tmp
+
+# 3. Gzip the results
+if [ $? -eq 0 ]; then
+    echo "Conversion complete. Compressing files..."
+    gzip $OUTDIR/${ID}*.fastq
+
+else
+    echo "fasterq-dump failed for $ID"
+    exit 1
+fi
+
+```
 FLAGS
+- -skip-technical
+  - only keep biological reads
+- -split-files
+  - 
 
 NOTES
+
 ---
 ### Genome generate
 INPUTS
+- Reference genome
+  - `species/01_inputs/species.chromosomes.fa`
+- Reference annotation 
+  - `species/01_inputs/species_mRNA.gtf
+- Index directory path
 
 COMMAND
-
+```bash
+STAR \
+     --runMode genomeGenerate \
+     --runThreadN $SLURM_CPUS_PER_TASK \
+     --genomeDir $INDEX \
+     --genomeFastaFiles $GENOME \
+     --sjdbGTFfile $ANNO \
+     --sjdbGTFtagExonParentTranscript Parent \
+     --sjdbOverhang 99 \
+     --genomeSAindexNbases 13
+```
 FLAGS
-
+- -runMode genomeGenerate
+- -sjdbGTFtagExonParentTranscript Parent
+- -sjdbOverhang 99
+- -genomeSAindexNbases 13
 NOTES
+
 ---
 ### Stringtie
 stringtie transcriptome assembly and lncRNA candidate discovery
