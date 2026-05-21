@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/species_prefetch/%x-%j_%A_%a.out
 
 # Paths
 LIST="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt"
