@@ -7,7 +7,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
 
 # Paths
-GENOME="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_genome.fa"
+GENOME="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species.chromosomes.fa"
 ANNO="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
 INDEX="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_indexed"
 

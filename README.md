@@ -60,25 +60,33 @@
 ---
 ### Set-up
 1. Prep the reference genome
-```bash
-# First, double check chromosome designations in the reference genome
-grep ">" species.chromosomes.fa # downloaded from PLncDB. Also make note of extra scaffolds for the next step.
-cut -f 1 species.gene.gff3 | sort | uniq # If needed, use sed or awk to ensure consistent naming
+NCBI `datasets` is an easy way to download a reference genome via command line; however the assembly usually contains messy fasta headers and gff files. The following steps can be used to obtain an assembly and clean it for use in this pipeline.
 
-# Second, index the chromosomes out of the greater assembly to remove excess noise during alignments
+```bash
+# Create or activate an environment with datasets-cli installed
 ml purge
-ml load SeqKit
-seqkit grep -v -r -p "scaffold|contig|Pt|Mt|ctg" species.chromosomes.fa > species.fa 
+ml load Miniforge3
+conda activate datasets
+
+# General datasets command
+datasets download genome taxon "[Scientific Name]" --reference --include genome,gff3
+unzip ncbi_dataset.zip
 ```
 
-2. Annotation must be in gtf format for stringtie
+`ncbi_dataset.zip` contains several files and subdirecotries. The script `ncbi_datasets_cleanup.py` pulls full chromosomes from the genome, filters the gff file for mRNA entries, and renames chromosome entries for both files so that they match. The script outputs the two required downstream files `species.chromosomes.fa` and 'species.gene.gff`.
 ```bash
+# Clean up the raw download
+cd ncbi_dataset/
+python3 /path/to/ncbi_datasets_cleanup.py [species]
+
+# Move into the GCF folder and use gffread to convert the gff to gtf
 ml purge
 ml load gffread
-gffread -T -o species_mRNA.gtf species.gene.gff3
+gffread -T -o species_mRNA.gtf species.gene.gff
 ```
+Move the new .fa and .gtf files into the 01_inputs directory for indexing, and remove the ncbi_dataset directory, README file, and md5sum file from the datasets download. Optional: keep the compressed datasets download for later reference.
 
-3. Create the UniProt database for DIAMOND
+Next, create the UniProt database for DIAMOND:
 ```bash
 wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
 gunzip uniprot_sprot.fasta.gz
@@ -104,5 +112,15 @@ unzip ncbi_dataset.zip
 
 `ncbi_dataset.zip` contains several files and subdirecotries. The script `ncbi_datasets_cleanup.py` uses the included jsonl file to pull full chromosomes from the genome, filter the gff file for mRNA entries, and rename chromosome entries for both files so that they match. The script outputs the two required downstream files `species.chromosomes.fa` and 'species_mRNA.gff`.
 ```bash
-python3 ncbi_datasets_cleanup.py [species]
+# Clean up the raw download
+cd ncbi_dataset/
+python3 /path/to/ncbi_datasets_cleanup.py [species]
+
+# Move into the GCF folder and use gffread to convert the gff to gtf
+ml purge
+ml load gffread
+gffread -T -o species_mRNA.gtf species.gene.gff
+
+# Move the new .fa and .gtf files into the 01_inputs directory for indexing
+# Remove ncbi_dataset directory, README file, and md5sum file from the datasets download
 ```
