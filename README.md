@@ -9,118 +9,93 @@
  Author GitHub:[Plant-LncPipe-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2/tree/master)
 ---
 ### Table of contents
-- [Working Directory](#working-directory)
 - [General overview](#general-overview)
+- [Working Directory](#working-directory)
 - [Gathering inputs](#gathering-inputs)
-- [Set-up commands](#set-up-commands)
+- [Set up](#set-up)
 ---
-## Working Directory
-- def_files
-  - def files for the pipeline. Use these to create necessary images.
-- scripts
-  - sbatch script templates for hpcc
-  - custom scripts for the pipeline
-- species
-  - 01_inputs
-    - pmid metadata
-    - list of sra IDs saved as `species_sra_IDs.txt`
-    - reference genome (`species.fa`) and annotation (`species_mRNA.gtf)
-  - 02_scripts
-    - all necessary scripts copied from parent script directory (edited using `sed`; see scripts dir)
-  - 03_outputs
-    - outputs from all 10 steps
-- truth_data
-  - lncRNA datasets gathered from [PLncDB](https://www.tobaccodb.org/plncdb/)
- ---
 ## General overview
 1. Obtain 'truth' dataset from [PLncDB](https://www.tobaccodb.org/plncdb/) for a given speices
-2. get a list of pmids associated with the rna-seq projects under the species tab in PLncDB
-3. Use EDirect and SRA-Toolkit to get raw data from each of these projects
+2. Generate a `PMID` list associated with RNA-seq projects under the 'species' tab in PLncDB
+3. Use `EDirect` and `SRA-Toolkit` to get raw data from each of these projects
 4. Download a reference genome and annotation file
-5. trim raw fastq files and align trimmed reads to reference
-6. assemble a reference-guided de novo transcriptome using stringtie
-7. obtain candidate lncRNAs (novel transcripts called by stringtie) using grep and gffread
-8. run these candidates through each ML tool
-9. intersect IDs that passed each tool to pbtain high-confidence lncRNAs
-10. use sequence alignment to compare high-confidence candidates to 'truth' dataset
+5. Trim raw `fastq` files and align trimmed reads to the reference genome
+6. Assemble a reference-guided *de novo* transcriptome using `StringTie`
+7. Obtain candidate lncRNAs using `grep` and `gffread`
+8. Run these candidates through `FEELnc`, `lncBoost`, `lncFinder`, `cpat`, and `DIAMOND`
+9. Intersect IDs that passed every tool to obtain high-confidence lncRNAs
+10. Use sequence alignment to compare high-confidence *ab initio* candidates to 'truth' dataset
+ ---
+## Working Directory
+- def_files
+  - definition files to create necessary imagesfor each tool
+- scripts
+  - sbatch script templates for hpcc
+  - custom `R` and `python` scripts
+- species
+  - 01_inputs
+    - PMID metadata
+    - list of sra IDs saved as `species_sra_IDs.txt`
+    - reference genome (`species.chromosomes.fa`) and annotation (`species_mRNA.gtf`)
+  - 02_scripts
+    - scripts copied from parent script directory (see `scripts/README.md`)
+  - 03_outputs
+    - pipeline output directories
+- truth_data
+  - lncRNA datasets gathered from [PLncDB](https://www.tobaccodb.org/plncdb/)
+  - species directories
+    - individual database lncRNA `fasta` and `gff3` files
+    - full concatonated lncRNA files
+    - condensed lncRNA `fasta` files (see `scripts/README.md` `cd-hit` step)
  ---
 ### Gathering inputs
 - Navigate to [PLncDB](https://www.tobaccodb.org/plncdb/)
 - Gather PMID information from the RNA-Seq table for a given species
   - Use EDirect to gather SRA accession numbers from PMIDs; save as list `species_sra_IDs.txt`
-- Gather truth sequences and the reference genome from the downloads>species page on PLncDB
-  - Download the lncRNA fasta files, the genome, and all of the gff3 files
-  - rename the genome `species.fa` and the annotation `species_mRNA.gff3`
+- Gather truth sequences from the downloads>species page on PLncDB
+  - Download the lncRNA fasta files and gff3 files
 - Create working directory
-  - Clone this repository. Clone [Plant-lncPipe](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2) and [FEELnc](https://github.com/tderrien/feelnc) into the scripts directory.
-  - use `singularity build` to build images from `def_files`
+  - Clone this repository. Clone [Plant-lncPipe](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2) and [FEELnc](https://github.com/tderrien/feelnc) into the `scripts` directory.
+  - use `singularity build` to build images from `def_files/*`
   - Create the working directory for the species
   - Copy scripts into `species/02_scripts` and run the `sed`  command (see `scripts/README.md`)
-  - make sure `species_sra_IDs.txt`, `species.fa`, and `species_mRNA.gff3` are in the `species/01_inputs` directory
 ---
-### Set-up
-1. Prep the reference genome
-NCBI `datasets` is an easy way to download a reference genome via command line; however the assembly usually contains messy fasta headers and gff files. The following steps can be used to obtain an assembly and clean it for use in this pipeline.
+## Set up
+### Prepare the reference genome assembly
+The NCBI tool `datasets-cli` is an easy way to download a reference genome via command line; however the assembly usually contains messy fasta headers and gff files. The following steps can be used to obtain the latest reference assembly for a species and clean it for use in this pipeline.
 
 ```bash
-# Create or activate an environment with datasets-cli installed
+# Create an environment with datasets-cli
 ml purge
 ml load Miniforge3
+conda create -n datasets -c conda-forge ncbi-datasets-cli
 conda activate datasets
 
 # General datasets command
 datasets download genome taxon "[Scientific Name]" --reference --include genome,gff3
-unzip ncbi_dataset.zip
+unzip ncbi_dataset.zip # This will result in a directory, an md5sum file, and a README.md file
 ```
 
-`ncbi_dataset.zip` contains several files and subdirecotries. The script `ncbi_datasets_cleanup.py` pulls full chromosomes from the genome, filters the gff file for mRNA entries, and renames chromosome entries for both files so that they match. The script outputs the two required downstream files `species.chromosomes.fa` and 'species.gene.gff`.
+The script `ncbi_datasets_cleanup.py` pulls full chromosomes from the genome, filters the gff file for mRNA entries, renames chromosome entries for both files so that they match, then outputs the two required downstream files: `species.chromosomes.fa` & `species.gene.gff`.
 ```bash
 # Clean up the raw download
-cd ncbi_dataset/
-python3 /path/to/ncbi_datasets_cleanup.py [species]
+cd ncbi_dataset/ # move into the unzipped directory
+python3 /path/to/ncbi_datasets_cleanup.py [species] # run the cleanup script with the chosen species designation as the first argument
 
-# Move into the GCF folder and use gffread to convert the gff to gtf
+# Move into the GCF folder inside ncbi_dataset/data/ and use gffread to convert the gff to gtf
 ml purge
 ml load gffread
 gffread -T -o species_mRNA.gtf species.gene.gff
 ```
-Move the new .fa and .gtf files into the 01_inputs directory for indexing, and remove the ncbi_dataset directory, README file, and md5sum file from the datasets download. Optional: keep the compressed datasets download for later reference.
+Move the new `.fa` and `.gtf` files into the `01_inputs` directory for indexing, and remove the ncbi_dataset directory, README file, and md5sum file from the datasets download. Optional: keep the compressed datasets download for later reference.
 
-Next, create the UniProt database for DIAMOND:
+### Create the UniProt database for DIAMOND:
 ```bash
 wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
 gunzip uniprot_sprot.fasta.gz
+
+ml purge
+ml load DIAMOND
 diamond makedb --in uniprot_sprot.fasta -d uniprot_out
 ```
-
-4. Double check paths for `star_genomegenerate.sb` then index the genome into `species/01_inputs/species_indexed`
-
 ---
-### Using an NCBI latest assembly release for a given species
-NCBI `datasets` is an easy way to download a reference genome via command line; however the assembly usually contains messy fasta headers and gff files. The following steps can be used to obtain an assembly and clean it for use in this pipeline.
-
-```bash
-# Create or activate an environment with datasets-cli installed
-ml purge
-ml load Miniforge3
-conda activate datasets
-
-# General datasets command
-datasets download genome taxon "[Scientific Name]" --reference --include genome,gff3
-unzip ncbi_dataset.zip
-```
-
-`ncbi_dataset.zip` contains several files and subdirecotries. The script `ncbi_datasets_cleanup.py` uses the included jsonl file to pull full chromosomes from the genome, filter the gff file for mRNA entries, and rename chromosome entries for both files so that they match. The script outputs the two required downstream files `species.chromosomes.fa` and 'species_mRNA.gff`.
-```bash
-# Clean up the raw download
-cd ncbi_dataset/
-python3 /path/to/ncbi_datasets_cleanup.py [species]
-
-# Move into the GCF folder and use gffread to convert the gff to gtf
-ml purge
-ml load gffread
-gffread -T -o species_mRNA.gtf species.gene.gff
-
-# Move the new .fa and .gtf files into the 01_inputs directory for indexing
-# Remove ncbi_dataset directory, README file, and md5sum file from the datasets download
-```
