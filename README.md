@@ -87,3 +87,22 @@ diamond makedb --in uniprot_sprot.fasta -d uniprot_out
 
 4. Double check paths for `star_genomegenerate.sb` then index the genome into `species/01_inputs/species_indexed`
 
+---
+### Using an NCBI latest assembly release for a given species
+NCBI `datasets` is an easy way to download a reference genome via command line; however the assembly usually contains messy fasta headers and gff files. The following steps can be used to obtain an assembly and clean it for use in this pipeline.
+
+```bash
+# Create or activate an environment with datasets-cli installed
+ml purge
+ml load Miniforge3
+conda activate datasets
+
+# General datasets command
+datasets download genome taxon "[Scientific Name]" --reference --include genome,gff3
+unzip ncbi_dataset.zip
+```
+
+`ncbi_dataset.zip` contains several files and subdirecotries. The script `ncbi_datasets_cleanup.py` uses the included jsonl file to pull full chromosomes from the genome, filter the gff file for mRNA entries, and rename chromosome entries for both files so that they match. The script outputs the two required downstream files `species.chromosomes.fa` and 'species_mRNA.gff`.
+```bash
+python3 ncbi_datasets_cleanup.py [species]
+```
