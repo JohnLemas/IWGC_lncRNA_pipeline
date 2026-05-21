@@ -16,7 +16,7 @@ species_prefix = sys.argv[1]
 print("Searching for NCBI dataset directory inside /data/GCF*...")
 
 # 2. Automatically find the GCF dataset directory
-gcf_dirs = glob.glob("/data/GCF*")
+gcf_dirs = glob.glob("data/GCF*")
 
 if not gcf_dirs:
     print("Error: Could not find any directory matching '/data/GCF*'!")
