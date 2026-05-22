@@ -4,9 +4,9 @@
 ### 5-6-2025
 ---
 ## Citation
- This pipeline was originally developed by Xue-Chan Tian *et al*:
- Original publication:[DOI](https://doi.org/10.1093/hr/uhae041)
- Author GitHub:[Plant-LncPipe-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2/tree/master)
+ This pipeline was originally developed by Xue-Chan Tian *et al*: \
+ Original publication: [DOI](https://doi.org/10.1093/hr/uhae041) \
+ Author GitHub: [Plant-LncPipe-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2/tree/master)
  
 ---
 ### Table of contents
@@ -14,6 +14,7 @@
 - [Working Directory](#working-directory)
 - [Gathering inputs](#gathering-inputs)
 - [Set up](#set-up)
+- [Running the pipeline](#running-the-pipeline)
 
 ---
 ## General overview
@@ -50,7 +51,7 @@
     - full concatonated lncRNA files
     - condensed lncRNA `fasta` files (see `scripts/README.md` `cd-hit` step)
  ---
-### Gathering inputs
+## Gathering inputs
 - Navigate to [PLncDB](https://www.tobaccodb.org/plncdb/)
 - Gather PMID information from the RNA-Seq table for a given species
   - Use EDirect to gather SRA accession numbers from PMIDs; save as list `species_sra_IDs.txt`
@@ -93,21 +94,73 @@ Move the new `.fa` and `.gtf` files into the `01_inputs` directory for indexing,
 
 ### Create the UniProt database for DIAMOND:
 ```bash
+# Download the latest UniProt database release
 wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+
+# Expand the file
 gunzip uniprot_sprot.fasta.gz
 
+# Use DIAMOND to make the reference database
 ml purge
 ml load DIAMOND
 diamond makedb --in uniprot_sprot.fasta -d uniprot_out
 ```
 ---
-### Running the pipeline
-*Detailed notes on running each step can be found in the `scripts/README.md` file.*
-Once all the inputs have been gathered and the species working directory is created (complete with copied and edited scripts) the order of operations is as follows:
+## Preparing the truth datasets
+Truth datasets are individually packaged from each respective source (ie NCBI, PLncBD, EVlncRNA, RNAcentral, etcetera). The goal of this step is to concatonate all of these input datasets into one master set, and condense this set using `CD-HIT` to filter out any lncRNAs that are present in more than one dataset. 
+```bash
+# Combine all fasta and gff files into one master set
+cat IWGC_lncRNA_pipeline/truth_data/species/*.fa >> IWGC_lncRNA_pipeline/truth_data/species/species_PLncDB_lncRNA.fa
+
+# Run the script to condense the master set
+sbatch IWGC_lncRNA_pipeline/species/02_scripts/cd-hit.sb
+
+```
+This master set should be exhaustive of the known experimentally validated and high confidence predicted lncRNAs already published.
+
+---
+## Running the pipeline
+**Detailed notes on running each step can be found in `scripts/README.md`**
+
+Once all the inputs have been gathered and the species working directory is created, the order of operations is as follows:
+
+### Steps 1 - 7: Preparing model inputs
 1. `star_genomegenerate.sb`
 2. `prefetch_array.sb`
 3. `fastp.sb`
 4. `alignment_array.sb`
-5. 
+5. `bam_indexing.sb`
+6. `stringtie_assemble.sb`
+7. `stringtie_merge.sb`
+
+### Step 8: Gathering Candidates
+Once the merge step is complete, the output `gtf` file contains all of the aligned sequence locations and any information about an overlapping mRNA in that region. To obtain candidate lncRNAs, `grep` for all of the aligned locations that did not overlap already annotated protein coding regions:
+
+```bash
+# Pull 'novel' StringTie IDs from merged gtf file
+grep 'transcript_id "MSTRG' merge.gtf > candidates.gtf
+
+# Write out the candidate sequences using the reference genome
+gffread -w candidates.fasta -g species.chromosomes.fa candidates.gtf
+
+# Create a list of unique candidate transcript IDs for later
+grep '>' candidates.fasta | sed 's/>//g' | sort -u > candidates.txt
+```
+
+These three steps result in the unfiltered candidate locations, sequences, and stringtie transcript IDs, which are used in all of the following *ab initio* prediction models.
+
+### Steps 9 - 13: Running the models
+*Note that each of the models can run simultaneously*
+
+9. `FEELnc_filter.sb`
+10. `cpat.sb`
+11. `lncFinder.sb`
+12. `lncBoost.sb`
+13. `DIAMOND.sb`
+
+### Steps 14 - 16: Analysis of results
+14. `intersect_ids.sb`
+15. `minimap2.sb`
+16. `FEELnc_classifier.sb`
 
 ---
