@@ -185,19 +185,21 @@ SLURM NOTES
 - 2 hours for soy (works surprisingly fast- like, minutes)
 ---
 ### fastp
-Cleans up raw `fastq` files from `prefetch_array.sb`. Trimmed reads are placed in the `species/03_outputs/01_fastp` directory. `fastp_wrapper.sh` and `fastp_template.sb` are designed to run without intervention. 
+Cleans up raw `fastq` files from `prefetch_array.sb`. Trimmed reads are placed in the `species/03_outputs/01_fastp` directory. Double check that the array field in the SLURM parameters correctly reflects the number of accessions, and that the file paths for the species in question are correct.
 
 INPUTS
-Raw `fastq` files from `prefetch_array.sb`
+- Raw `fastq` files from `prefetch_array.sb`
+- SRA accession list
+- Output directory for trimmed reads
 
 COMMAND
 ```bash
-bash fastp_wrapper.sh
+sbatch fastp.sb
 ```
 FLAGS
 
 NOTES
-Might want to edit this step to work as an array instead of submitting all samples at once.
+Updated the original wrapper and template scripts to use an array instead. Easier on SLURM to organize the 25 jobs on its own without me submitting all of them at once. This script identified paired-end or singl end reads and selects fastp parameters accordingly. Works well when pulling lots of random SRA accessions from NCBI without having to filter for paired-end reads. This will be overkill in future runs where I am more selective of input data.
 
 ---
 ### FEELnc
