@@ -1,5 +1,7 @@
 #!/bin/bash
 
+TEMP="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/02_scripts/fastp_template.sb"
+
 # Function to submit jobs
 submit_batch() {
     LIST_FILE=$1
@@ -12,7 +14,7 @@ submit_batch() {
         
         # 2. Only submit if it looks like a real SRA ID (SRR123, ERR123, etc.)
         if [[ $accession =~ ^[SED]RR ]]; then
-            sbatch fastp_template.sb "$accession" "$FOLDER_NAME"
+            sbatch "$TEMP" "$accession" "$FOLDER_NAME"
         else
             echo "Skipping non-accession line: $accession"
         fi
