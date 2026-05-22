@@ -7,12 +7,14 @@
  This pipeline was originally developed by Xue-Chan Tian *et al*:
  Original publication:[DOI](https://doi.org/10.1093/hr/uhae041)
  Author GitHub:[Plant-LncPipe-v2](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2/tree/master)
+ 
 ---
 ### Table of contents
 - [General overview](#general-overview)
 - [Working Directory](#working-directory)
 - [Gathering inputs](#gathering-inputs)
 - [Set up](#set-up)
+
 ---
 ## General overview
 1. Obtain 'truth' dataset from [PLncDB](https://www.tobaccodb.org/plncdb/) for a given speices
@@ -28,7 +30,7 @@
  ---
 ## Working Directory
 - def_files
-  - definition files to create necessary imagesfor each tool
+  - definition files to create necessary images for each tool
 - scripts
   - sbatch script templates for hpcc
   - custom `R` and `python` scripts
@@ -98,4 +100,14 @@ ml purge
 ml load DIAMOND
 diamond makedb --in uniprot_sprot.fasta -d uniprot_out
 ```
+---
+### Running the pipeline
+*Detailed notes on running each step can be found in the `scripts/README.md` file.*
+Once all the inputs have been gathered and the species working directory is created (complete with copied and edited scripts) the order of operations is as follows:
+1. `star_genomegenerate.sb`
+2. `prefetch_array.sb`
+3. `fastp.sb`
+4. `alignment_array.sb`
+5. 
+
 ---
