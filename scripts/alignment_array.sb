@@ -3,7 +3,7 @@
 #SBATCH --array=1-[# of samples] # wc -l species_sra_IDs.txt to get the number of samples
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=07:00:00 # based on 160 sra accessions
+#SBATCH --time=02:00:00 # typical mapping rates for corn and soy completed this step in well under an hour
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/species_align/%x-%j_%A_%a.out # generates a ton of logs. use subdirectory in log file path
 
 # 1. Paths
