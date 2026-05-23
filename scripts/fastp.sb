@@ -26,8 +26,9 @@ conda activate fastp
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $ID"
 
 # --- SMART SEQUENCING MODE CHECK ---
-if [ -f "${IN_DIR}/${ID}_2.fastq.gz" ]; then
-    echo "Processing $ID as PAIRED-END"
+# Case 1: True PAIRED-END (Both _1 and _2 files must exist)
+if [ -f "${IN_DIR}/${ID}_1.fastq.gz" ] && [ -f "${IN_DIR}/${ID}_2.fastq.gz" ]; then
+    echo "Processing $ID as TRUE PAIRED-END"
     fastp \
       -i "${IN_DIR}/${ID}_1.fastq.gz" \
       -I "${IN_DIR}/${ID}_2.fastq.gz" \
@@ -37,12 +38,29 @@ if [ -f "${IN_DIR}/${ID}_2.fastq.gz" ]; then
       --thread 8 -x -g \
       --html "${OUT_DIR}/${ID}_fastp.html" \
       --json "${OUT_DIR}/${ID}_fastp.json"
-else
-    echo "Processing $ID as SINGLE-END"
+
+# Case 2: SINGLE-END but named with a '_1.fastq.gz' suffix
+elif [ -f "${IN_DIR}/${ID}_1.fastq.gz" ]; then
+    echo "Processing $ID as SINGLE-END (Input file: ${ID}_1.fastq.gz)"
+    fastp \
+      -i "${IN_DIR}/${ID}_1.fastq.gz" \
+      -o "${OUT_DIR}/${ID}_trim.fastq.gz" \
+      --thread 8 -x -g \
+      --html "${OUT_DIR}/${ID}_fastp.html" \
+      --json "${OUT_DIR}/${ID}_fastp.json"
+
+# Case 3: SINGLE-END named traditionally '.fastq.gz'
+elif [ -f "${IN_DIR}/${ID}.fastq.gz" ]; then
+    echo "Processing $ID as SINGLE-END (Input file: ${ID}.fastq.gz)"
     fastp \
       -i "${IN_DIR}/${ID}.fastq.gz" \
       -o "${OUT_DIR}/${ID}_trim.fastq.gz" \
       --thread 8 -x -g \
       --html "${OUT_DIR}/${ID}_fastp.html" \
       --json "${OUT_DIR}/${ID}_fastp.json"
+
+# Error Catching: File not found
+else
+    echo "ERROR: Could not find raw fastq data for $ID in $IN_DIR"
+    exit 1
 fi
