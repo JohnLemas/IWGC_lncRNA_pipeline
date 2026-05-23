@@ -7,7 +7,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j_%A_%a.out
 
 # 1. Paths
-LIST="/mnt/scratch/lemasjoh/BASF/species/01_inputs/species_sra_IDs.txt"
+LIST="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt"
 ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
 
 # Input BAM directory
