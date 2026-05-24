@@ -6,7 +6,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # 1. Paths
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc.sif"
+IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_filess/FEELnc.sif"
 INPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
 REF_ANN="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
 OUTPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc/species_FEELnc.gtf"

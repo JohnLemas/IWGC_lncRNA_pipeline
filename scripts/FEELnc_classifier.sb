@@ -6,7 +6,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # 1. Paths to your files
-IMG="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc2.sif"
+IMG="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/FEELnc.sif"
 FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc"
 LNC_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_final/species_lncRNA.gtf"
 mRNA_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"

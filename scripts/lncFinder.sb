@@ -6,7 +6,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # Paths
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncfinder.sif" # dedicated image
+IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/lncfinder.sif" # dedicated image
 RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/02_scripts/lncFinder.R" # path to r script. edit R script to set input/output paths and parameters as needed before running this file.
 
 # Run the R script inside the container
