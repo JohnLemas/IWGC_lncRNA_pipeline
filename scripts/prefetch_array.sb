@@ -15,11 +15,12 @@ mkdir -p $OUTDIR
 
 ml purge
 ml load SRA-Toolkit
+ml load pigz/2.8-GCCcore-12.3.0 # this is the version that is compatible with SRA-Toolkit on MSU HPCC
 
 echo "Processing ID: $ID" # log the sra accession being processed
 
 # 1. Run Prefetch (only if not already downloaded)
-prefetch $ID
+prefetch $ID --max-size 30G # Default is 20 G, but some Z. mays runs were larger. adjust this as necessary and always check the log files before running fastp and alignment_array
 
 # 2. Run fasterq-dump
 # --skip-technical: only keep biological reads
@@ -29,13 +30,12 @@ fasterq-dump $ID \
     --split-files \
     --skip-technical \
     --threads $SLURM_CPUS_PER_TASK \
-    --temp /tmp \
-    --max-size 30G # Default is 20 G, but some Z. mays runs were larger. adjust this as necessary and always check the log files before running fastp and alignment_array
+    --temp /tmp
 
 # 3. Gzip the results
 if [ $? -eq 0 ]; then
     echo "Conversion complete. Compressing files..."
-    gzip $OUTDIR/${ID}*.fastq
+    pigz -p $SLURM_CPUS_PER_TASK $OUTDIR/${ID}*.fastq 
 
 else
     echo "fasterq-dump failed for $ID"
