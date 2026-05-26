@@ -12,7 +12,7 @@ SCRATCH_BASE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline"
 LIST="$SCRATCH_BASE/$SPECIES_DIR/01_inputs/species_sra_IDs.txt"
 
 # Pull the specific ID for this array task line-by-line
-ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST")
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs)
 
 IN_DIR="$SCRATCH_BASE/$SPECIES_DIR/01_inputs/raw_fastq" 
 OUT_DIR="$SCRATCH_BASE/$SPECIES_DIR/03_outputs/01_fastp"

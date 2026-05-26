@@ -8,7 +8,7 @@
 
 # 1. Paths
 LIST="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt"
-ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST)
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs) # pulls the sra accession for the current array task ID
 
 # Input BAM directory
 BAM_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/02_STAR"

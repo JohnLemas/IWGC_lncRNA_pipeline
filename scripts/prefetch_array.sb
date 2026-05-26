@@ -9,7 +9,7 @@
 # Paths
 LIST="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt"
 OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/raw_fastq"
-ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" $LIST) # submit each accession as its own job
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs) # pulls the sra accession for the current array task ID
 
 mkdir -p $OUTDIR
 

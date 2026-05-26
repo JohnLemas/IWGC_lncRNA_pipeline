@@ -16,7 +16,7 @@ set -e
 
 # --- Extract the Target File ---
 # Grab the base name (e.g., 'classifications') using the Slurm Array ID
-IMAGE_NAME=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST")
+IMAGE_NAME=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs)
 
 # Build full paths for the build process
 DEF_FILE="$BASE_DIR/${IMAGE_NAME}.def"
