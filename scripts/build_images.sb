@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash --login
 #SBATCH --job-name=build_def_files
 #SBATCH --array=1-7
 #SBATCH --cpus-per-task=2
