@@ -59,8 +59,9 @@
   - Download the lncRNA fasta files and gff3 files
 - Create working directory
   - Clone this repository. Clone [Plant-lncPipe](https://github.com/xuechantian/Plant-LncRNA-pipeline-v2) and [FEELnc](https://github.com/tderrien/feelnc) into the `scripts` directory.
-  - use `singularity build` to build images from `def_files/*`
+  - Run `scripts/build_images.sb` array job to build each necessary image
   - Create the working directory for the species
+    - `mkdir 01_inputs 02_scripts 03_outputs`
   - Copy scripts into `species/02_scripts` and run the `sed`  command (see `scripts/README.md`)
 ---
 ## Set up
@@ -80,11 +81,13 @@ unzip ncbi_dataset.zip # This will result in a directory, an md5sum file, and a 
 ```
 
 The script `ncbi_datasets_cleanup.py` pulls full chromosomes from the genome, filters the gff file, renames chromosome entries for both files so that they match, then outputs the two required downstream files: `species.chromosomes.fa` & `species_mRNA.gtf`.
+
 ```bash
 # Clean up the raw download
 cd ncbi_dataset/ # move into the unzipped directory
 python3 /path/to/ncbi_datasets_cleanup.py [species] # run the cleanup script with the chosen species designation as the first argument
 ```
+
 Move the new `chromosomes.fa` and `_mRNA.gtf` files into the `species/01_inputs` directory for indexing, and remove the ncbi_dataset directory, README file, and md5sum file from the datasets download. Optional: keep the compressed datasets download for later reference.
 
 ### Create the UniProt database for DIAMOND:
@@ -103,6 +106,7 @@ diamond makedb --in uniprot_sprot.fasta -d uniprot_out
 ---
 ## Preparing the truth datasets
 Truth datasets are individually packaged from each respective source (ie NCBI, PLncBD, EVlncRNA, RNAcentral, etcetera). The goal of this step is to concatonate all of these input datasets into one master set, and condense this set using `CD-HIT` to filter out any lncRNAs that are present in more than one dataset. 
+
 ```bash
 # Combine all fasta and gff files into one master set
 cat IWGC_lncRNA_pipeline/truth_data/species/*.fa >> IWGC_lncRNA_pipeline/truth_data/species/species_PLncDB_lncRNA.fa
@@ -111,6 +115,7 @@ cat IWGC_lncRNA_pipeline/truth_data/species/*.fa >> IWGC_lncRNA_pipeline/truth_d
 sbatch IWGC_lncRNA_pipeline/species/02_scripts/cd-hit.sb
 
 ```
+
 This master set should be exhaustive of the known experimentally validated and high confidence predicted lncRNAs already published.
 
 ---
