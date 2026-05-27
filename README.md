@@ -79,18 +79,13 @@ datasets download genome taxon "[Scientific Name]" --reference --include genome,
 unzip ncbi_dataset.zip # This will result in a directory, an md5sum file, and a README.md file
 ```
 
-The script `ncbi_datasets_cleanup.py` pulls full chromosomes from the genome, filters the gff file for mRNA entries, renames chromosome entries for both files so that they match, then outputs the two required downstream files: `species.chromosomes.fa` & `species.gene.gff`.
+The script `ncbi_datasets_cleanup.py` pulls full chromosomes from the genome, filters the gff file, renames chromosome entries for both files so that they match, then outputs the two required downstream files: `species.chromosomes.fa` & `species_mRNA.gtf`.
 ```bash
 # Clean up the raw download
 cd ncbi_dataset/ # move into the unzipped directory
 python3 /path/to/ncbi_datasets_cleanup.py [species] # run the cleanup script with the chosen species designation as the first argument
-
-# Move into the GCF folder inside ncbi_dataset/data/ and use gffread to convert the gff to gtf
-ml purge
-ml load gffread
-gffread -T -o species_mRNA.gtf species.gene.gff
 ```
-Move the new `.fa` and `.gtf` files into the `01_inputs` directory for indexing, and remove the ncbi_dataset directory, README file, and md5sum file from the datasets download. Optional: keep the compressed datasets download for later reference.
+Move the new `chromosomes.fa` and `_mRNA.gtf` files into the `species/01_inputs` directory for indexing, and remove the ncbi_dataset directory, README file, and md5sum file from the datasets download. Optional: keep the compressed datasets download for later reference.
 
 ### Create the UniProt database for DIAMOND:
 ```bash

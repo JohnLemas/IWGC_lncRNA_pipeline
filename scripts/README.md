@@ -35,6 +35,8 @@ sed -i 's/species/A.thaliana/g' IWGC_lncRNA_pipeline/A.thaliana/02_scripts/*
   - image, r script, and sbatch script for this step
 - [Minimap2](#minimap2)
   - mapping predictions against truth sequences for pipeline analysis
+- [NCBI datasets](#ncbi-datasets)
+  - clean up `datasets` reference assembly and annotation files for use in the pipeline
 - [Prefetch array](#prefetch-array)
   - uses sra accessions list to run `prefetch` and `fasterq-dump` as an array
 - [Genome generate](#genome-generate)
@@ -423,6 +425,26 @@ FLAGS
 
 NOTES
 Super fast! 32 G, 8 threads, 30 minutes
+---
+### NCBI datasets
+INPUTS
+- unzipped `ncbi_dataset` directory
+- species designation (ie z.mays)
+
+COMMAND
+```bash
+# Unzip the dataset
+unzip ncbi_dataset.zip
+
+# Move into the uncompressed directory and run the cleanup script
+cd ncbi_dataset
+python3 IWGC_lncRNA_pipeline/scripts/ncbi_datasets_cleanup.py [species]
+
+# Move the new clean assembly and annotation files into the inputs directory
+mv species.chromosomes.fa IWGC_lncRNA_pipeline/species/01_inputs/
+mv species_mRNA.gtf IWGC_lncRNA_pipeline/species/01_inputs/
+```
+
 ---
 ### Prefetch array
 INPUTS
