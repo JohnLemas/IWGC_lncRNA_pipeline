@@ -10,8 +10,8 @@ echo -e ">>>CPAT-plant:\n..loading image and data.."
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/cpat_plant.sif" # path to cpat image built with singularity build -r cpat_plant.sif cpat_plant.def
 SEQS="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta" # fasta file obtained from gffread -w species_candidates.fasta -g species_genome.fa species_candidates.gtf
 HEX="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/Plant-LncRNA-pipeline-v2/Model/Plant_Hexamer.tsv" # this is the hexamer table provided by Plant-LncPipe Github Repo
-LOGIT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/Plant.logit.RData" # also provided by Plant-LncPipe Github Repo, but wrong version. Re-saved to work with cpat.sif- use this one.
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/06_cpat"
+LOGIT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/Plant.logit.v2.RData" # also provided by Plant-LncPipe Github Repo, but wrong version. Re-saved to work with cpat.sif- use this one.
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/06_cpat"
 OUT_ALL="${OUT_DIR}/species_cpat.output"
 
 echo -e "..creating output directory:\n\t${OUT_DIR}"
