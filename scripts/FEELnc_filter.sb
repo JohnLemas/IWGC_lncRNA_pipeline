@@ -9,8 +9,11 @@
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/FEELnc.sif"
 INPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
 REF_ANN="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
+OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc"
 OUTPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
 FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/feelnc"
+
+mkdir -p $OUTPUT_DIR
 
 # 2. Run it
 singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
