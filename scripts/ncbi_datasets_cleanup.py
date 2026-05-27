@@ -43,12 +43,13 @@ if missing_files:
 
 # Define custom output paths using your naming specifications
 output_fasta = os.path.join(target_dir, f"{species_prefix}.chromosomes.fa")
-output_gff = os.path.join(target_dir, f"{species_prefix}.gene.gff")
+# Output direct to GTF format now
+output_gtf = os.path.join(target_dir, f"{species_prefix}_mRNA.gtf")
 
 print(f"-> Found FASTA:          {os.path.basename(input_fasta)}")
 print(f"-> Found GFF:            {os.path.basename(input_gff)}")
 print(f"-> Target FASTA Output:  {output_fasta}")
-print(f"-> Target GFF Output:    {output_gff}")
+print(f"-> Target GTF Output:    {output_gtf}")
 
 # --- Step 1: Extract Chromosome Map directly from FASTA headers ---
 print("\nStep 1: Parsing FASTA headers to map primary chromosomes...")
@@ -77,7 +78,6 @@ if not chr_mapping:
     sys.exit(1)
 else:
     print(f"Success! Detected {len(chr_mapping)} main chromosomes.")
-    # Show a brief preview of what was found
     preview = list(chr_mapping.items())[:3]
     for acc, chrom in preview:
         print(f"  Mapping: {acc} -> {chrom}")
@@ -100,10 +100,9 @@ with open(input_fasta, 'r') as infile, open(output_fasta, 'w') as outfile:
 
 print(f"Saved: {os.path.basename(output_fasta)}")
 
-# --- Step 3: Clean and Normalize to Valid GFF3 ---
-print("\nStep 3: Filtering GFF to primary chromosomes and formatting for GFF3 specification...")
+# --- Step 3: Direct Clean-to-GTF Generation ---
+print("\nStep 3: Generating FEELnc-compliant GTF directly from database...")
 
-# Helper function to parse GFF attribute string into a python dictionary
 def parse_attributes(attr_string):
     attrs = {}
     for item in attr_string.strip().split(';'):
@@ -112,11 +111,10 @@ def parse_attributes(attr_string):
             attrs[key.strip()] = val.strip()
     return attrs
 
-# Track mappings so child features (exons) inherit their parent gene's true name
 tx_to_gene_name = {}
 gene_id_to_name = {}
 
-# Pass 1: Scan file to pre-populate parent gene names
+# Pass 1: Build the global relationship dictionary
 with open(input_gff, 'r') as infile:
     for line in infile:
         if line.startswith('#') or not line.strip():
@@ -133,22 +131,20 @@ with open(input_gff, 'r') as infile:
             g_name = attrs.get('gene', attrs.get('Name', g_id))
             if g_id:
                 gene_id_to_name[g_id] = g_name
-        elif feature_type in ['mRNA', 'lnc_RNA', 'transcript']:
+        elif feature_type in ['mRNA', 'lnc_RNA', 'transcript', 'tRNA', 'rRNA']:
             tx_id = attrs.get('ID')
             parent_gene = attrs.get('Parent')
             if tx_id and parent_gene:
-                # Find the gene name associated with this parent ID
                 g_name = gene_id_to_name.get(parent_gene, parent_gene)
                 tx_to_gene_name[tx_id] = g_name
 
-# Pass 2: Filter lines and build clean GFF3 records
-with open(input_gff, 'r') as infile, open(output_gff, 'w') as outfile:
-    # Standard GFF3 Header
-    outfile.write("##gff-version 3\n")
+# Pass 2: Print explicitly structured GTF features directly
+with open(input_gff, 'r') as infile, open(output_gtf, 'w') as outfile:
+    outfile.write("#gtf-version 2.2\n")
+    infile.seek(0)
     
-    infile.seek(0) # Reset file read pointer to the beginning
     for line in infile:
-        if line.startswith('#'):
+        if line.startswith('#') or not line.strip():
             continue
             
         columns = line.strip().split('\t')
@@ -159,33 +155,32 @@ with open(input_gff, 'r') as infile, open(output_gff, 'w') as outfile:
         feature_type = columns[2]
         
         if seqid in chr_mapping:
-            # Captures standard structural elements of coding and non-coding transcripts
-            if feature_type in ['gene', 'mRNA', 'exon', 'CDS', 'five_prime_UTR', 'three_prime_UTR', 'lnc_RNA']:
+            # Standard structural features required by FEELnc
+            if feature_type in ['mRNA', 'exon', 'CDS', 'five_prime_UTR', 'three_prime_UTR', 'lnc_RNA']:
                 attrs = parse_attributes(columns[8])
-                new_attrs = []
                 
-                # Re-inject/Keep crucial structural tags
-                if 'ID' in attrs:
-                    new_attrs.append(f"ID={attrs['ID']}")
-                if 'Parent' in attrs:
-                    new_attrs.append(f"Parent={attrs['Parent']}")
+                # 1. Resolve the clean gene_id (The exact locus name like LOC103641878)
+                if feature_type in ['mRNA', 'lnc_RNA']:
+                    tx_id = attrs.get('ID', 'unknown_tx')
+                    resolved_gene = tx_to_gene_name.get(tx_id, attrs.get('Parent', 'unknown_gene'))
+                else:
+                    tx_id = attrs.get('Parent', 'unknown_tx')
+                    resolved_gene = tx_to_gene_name.get(tx_id, 'unknown_gene')
                 
-                # Explicitly resolve parent gene mapping for gffread's tracking mechanism
-                resolved_gene = "unknown_gene"
-                if feature_type == 'gene':
-                    resolved_gene = attrs.get('gene', attrs.get('Name', attrs.get('ID')))
-                elif feature_type in ['mRNA', 'lnc_RNA']:
-                    resolved_gene = tx_to_gene_name.get(attrs.get('ID'), attrs.get('Parent', 'unknown_gene'))
-                else: # Child components (exon, CDS, UTR)
-                    resolved_gene = tx_to_gene_name.get(attrs.get('Parent'), 'unknown_gene')
+                # 2. Re-label features to comply with standard GTF nomenclature
+                if feature_type == 'lnc_RNA':
+                    feature_type = 'mRNA'
                 
-                new_attrs.append(f"gene={resolved_gene}")
-                new_attrs.append(f"Name={resolved_gene}")
+                # 3. Formulate the explicit GTF block layout for column 9
+                # Every line gets both gene_id and transcript_id, without exception.
+                gtf_attributes = f'gene_id "{resolved_gene}"; transcript_id "{tx_id}"; gene_name "{resolved_gene}";'
                 
-                # Reassemble line
+                # 4. Modify columns and save
                 columns[0] = chr_mapping[seqid]
-                columns[8] = ";".join(new_attrs)
+                columns[2] = feature_type
+                columns[8] = gtf_attributes
+                
                 outfile.write('\t'.join(columns) + '\n')
 
-print(f"Saved clean GFF3: {os.path.basename(output_gff)}")
-print(f"\nProcessing complete! Outputs generated successfully for string ID: '{species_prefix}'")
+print(f"Saved compliant GTF: {os.path.basename(output_gtf)}")
+print(f"\nProcessing complete! Direct output generated successfully for: '{species_prefix}'")
