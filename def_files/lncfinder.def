@@ -3,11 +3,10 @@ From: ubuntu:22.04
 
 %labels
     Maintainer your_name
-    Version v1.1
+    Version v1.2
     Description Image for LncFinder with Secondary Structure (ViennaRNA/RNAfold) support
 
 %environment
-    # Set locale to avoid R encoding issues
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
     export PATH=/usr/local/bin:$PATH
@@ -34,27 +33,99 @@ From: ubuntu:22.04
         libjpeg-dev \
         build-essential \
         gfortran \
-        cmake
+        cmake \
+        lsb-release \
+        libgomp1
 
     # 2. Add CRAN Repository and Install R (4.x)
     wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
-    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/"
+    add-apt-repository -y "deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/"
     apt-get update && apt-get install -y r-base r-base-dev
 
-    # 3. Add ViennaRNA Official PPA and Install Core Tools
-    # This guarantees 'RNAfold' is natively accessible via APT without manual compiling
-    add-apt-repository -y ppa:ronny-lorenz/viennarna
-    apt-get update && apt-get install -y vienna-rna
+    # 3. Download and Install ViennaRNA natively from the TBI Vienna Server
+    # Bypasses the flaky PPA system completely.
+    cat <<EOF > /etc/apt/sources.list.d/viennarna.list
+deb https://www.tbi.univie.ac.at/RNA/packages/debian jammy/
+EOF
+    # Fetch their official archive key
+    wget -qO- https://www.tbi.univie.ac.at/RNA/packages/debian/public.key | apt-key add -
+    
+    # Update and install the binary package
+    apt-get update && apt-get install -y --no-install-recommends vienna-rna
 
-    # 4. Install R Packages 
-    # Parallel is a base R package; omitting it here prevents throwing unnecessary mirror warnings.
+    # 4. Install R Packages (Fast bundled installation)
     R -e "install.packages(c('seqinr', 'e1071', 'LncFinder'), repos='https://cloud.r-project.org')"
 
     # 5. Clean up to keep the image light
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 %test
-    # Verify R and LncFinder
+    # Verify R and LncFinder packages
     R -e "library(LncFinder); library(seqinr); library(e1071)"
-    # Verify RNAfold (Critical for SS.features=TRUE)
+    # Verify RNAfold executable
+    RNAfold --versionBootstrap: docker
+From: ubuntu:22.04
+
+%labels
+    Maintainer your_name
+    Version v1.2
+    Description Image for LncFinder with Secondary Structure (ViennaRNA/RNAfold) support
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PATH=/usr/local/bin:$PATH
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # 1. Install system dependencies & prerequisites
+    apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common \
+        dirmngr \
+        gnupg \
+        wget \
+        curl \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
+        build-essential \
+        gfortran \
+        cmake \
+        lsb-release \
+        libgomp1
+
+    # 2. Add CRAN Repository and Install R (4.x)
+    wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
+    add-apt-repository -y "deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/"
+    apt-get update && apt-get install -y r-base r-base-dev
+
+    # 3. Download and Install ViennaRNA natively from the TBI Vienna Server
+    # Bypasses the flaky PPA system completely.
+    cat <<EOF > /etc/apt/sources.list.d/viennarna.list
+deb https://www.tbi.univie.ac.at/RNA/packages/debian jammy/
+EOF
+    # Fetch their official archive key
+    wget -qO- https://www.tbi.univie.ac.at/RNA/packages/debian/public.key | apt-key add -
+    
+    # Update and install the binary package
+    apt-get update && apt-get install -y --no-install-recommends vienna-rna
+
+    # 4. Install R Packages (Fast bundled installation)
+    R -e "install.packages(c('seqinr', 'e1071', 'LncFinder'), repos='https://cloud.r-project.org')"
+
+    # 5. Clean up to keep the image light
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+%test
+    # Verify R and LncFinder packages
+    R -e "library(LncFinder); library(seqinr); library(e1071)"
+    # Verify RNAfold executable
     RNAfold --version
