@@ -3,23 +3,23 @@ From: ubuntu:22.04
 
 %labels
     Maintainer your_name
-    Version v1.0
-    Description Image for LncFinder with Secondary Structure (ViennaRNA) support
+    Version v1.1
+    Description Image for LncFinder with Secondary Structure (ViennaRNA/RNAfold) support
 
 %environment
     # Set locale to avoid R encoding issues
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
-    # Ensure RNAfold is in the path
     export PATH=/usr/local/bin:$PATH
 
 %post
     export DEBIAN_FRONTEND=noninteractive
 
-    # 1. Install system dependencies
+    # 1. Install system dependencies & prerequisites
     apt-get update && apt-get install -y --no-install-recommends \
         software-properties-common \
         dirmngr \
+        gnupg \
         wget \
         curl \
         libcurl4-openssl-dev \
@@ -36,27 +36,25 @@ From: ubuntu:22.04
         gfortran \
         cmake
 
-    # 2. Install R (Current version)
+    # 2. Add CRAN Repository and Install R (4.x)
     wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc
-    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/"
+    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/"
     apt-get update && apt-get install -y r-base r-base-dev
 
-    # 3. Install ViennaRNA (The engine for SS.features=TRUE)
-    # We install from source or pre-compiled to ensure RNAfold is available
-    apt-get install -y vienna-rna
+    # 3. Add ViennaRNA Official PPA and Install Core Tools
+    # This guarantees 'RNAfold' is natively accessible via APT without manual compiling
+    add-apt-repository -y ppa:ronny-lorenz/viennarna
+    apt-get update && apt-get install -y vienna-rna
 
-    # 4. Install R Packages
-    # Using a specific CRAN mirror for stability
-    R -e "install.packages('seqinr', repos='https://cloud.r-project.org')"
-    R -e "install.packages('e1071', repos='https://cloud.r-project.org')"
-    R -e "install.packages('parallel', repos='https://cloud.r-project.org')"
-    R -e "install.packages('LncFinder', repos='https://cloud.r-project.org')"
+    # 4. Install R Packages 
+    # Parallel is a base R package; omitting it here prevents throwing unnecessary mirror warnings.
+    R -e "install.packages(c('seqinr', 'e1071', 'LncFinder'), repos='https://cloud.r-project.org')"
 
     # 5. Clean up to keep the image light
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 %test
     # Verify R and LncFinder
-    R -e "library(LncFinder); library(seqinr)"
+    R -e "library(LncFinder); library(seqinr); library(e1071)"
     # Verify RNAfold (Critical for SS.features=TRUE)
     RNAfold --version
