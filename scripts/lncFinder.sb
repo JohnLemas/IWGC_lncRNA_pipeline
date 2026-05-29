@@ -2,7 +2,7 @@
 #SBATCH --job-name=species_lncFinder
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH --time=1:00:00
+#SBATCH --time=3:00:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # Paths
