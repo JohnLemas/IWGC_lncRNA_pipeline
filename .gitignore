@@ -5,7 +5,7 @@
 *gtf
 *gz
 *sif
-**.DS_Store
+*.DS_Store
 *gene_info.txt
 !/g.max/
 !/z.mays/
