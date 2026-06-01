@@ -38,11 +38,25 @@ names(structures) <- headers
 Seqs <- read.fasta(input_fasta, seqtype = "DNA")
 fasta_names <- names(Seqs)
 
-if(!all(fasta_names %in% names(structures))) {
-  stop("CRITICAL ERROR: Sequence IDs in FASTA and RNAfold output do not match.")
+# Identify which sequences were successfully folded
+folded_names <- names(structures)
+
+# Count how many were skipped for your logs
+skipped_count <- sum(!fasta_names %in% folded_names)
+if (skipped_count > 0) {
+  cat(sprintf(">>> WARNING: %d ultra-long sequences were skipped by RNAfold. Filtering them out of FASTA list...\n", skipped_count))
+  
+  # Keep ONLY the sequences that have a matching folded structure
+  Seqs <- Seqs[fasta_names %in% folded_names]
+  fasta_names <- names(Seqs)
 }
 
-# Reorder structure vector to perfectly mirror FASTA arrangement
+# Final sanity check to make sure alignment is 100% perfect now
+if(!all(fasta_names %in% folded_names)) {
+  stop("CRITICAL ERROR: Severe ID mismatch between FASTA and RNAfold output.")
+}
+
+# Reorder structure vector to perfectly mirror the filtered FASTA arrangement
 Structures <- structures[fasta_names]
 
 # ==========================================
