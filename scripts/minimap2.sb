@@ -14,6 +14,8 @@ TRUTH="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/truth_data/species/specie
 OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/11_verify"
 OUT_FILE="${OUTDIR}/species_cd-hit-0.9_vs_pred.paf"
 
+mkdir -p $OUTDIR
+
 echo -e "\n\tload module..\n"
 
 ml purge
