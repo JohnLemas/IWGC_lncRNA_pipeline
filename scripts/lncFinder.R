@@ -44,36 +44,42 @@ folded_names <- names(structures)
 # Count how many were skipped for your logs
 skipped_count <- sum(!fasta_names %in% folded_names)
 if (skipped_count > 0) {
-  cat(sprintf(">>> WARNING: %d ultra-long sequences were skipped by RNAfold. Filtering them out of FASTA list...\n", skipped_count))
+  cat(sprintf(">>> WARNING: %d ultra-long sequences were skipped by RNAfold. Filtering them out...\n", skipped_count))
   
-  # Keep ONLY the sequences that have a matching folded structure
+  # Keep only the fasta entries that match what successfully folded
   Seqs <- Seqs[fasta_names %in% folded_names]
   fasta_names <- names(Seqs)
 }
 
-# Final sanity check to make sure alignment is 100% perfect now
-if(!all(fasta_names %in% folded_names)) {
-  stop("CRITICAL ERROR: Severe ID mismatch between FASTA and RNAfold output.")
-}
-
-# Reorder structure vector to perfectly mirror the filtered FASTA arrangement
+# Reorder structure vector to perfectly match the filtered FASTA arrangement
 Structures <- structures[fasta_names]
+
+# ==========================================
+# FORMAT FOR LNCFINDER SS MODULE
+# ==========================================
+# LncFinder's internal 'read_SS' logic expects a list structure where each element 
+# contains the secondary structure string vector (Dot-Bracket Notation).
+# We convert our named vector into the list format LncFinder expects.
+
+SS_List <- lapply(Structures, function(x) {
+  # Split the dot-bracket string into individual character elements
+  strsplit(x, "")[[1]]
+})
+names(SS_List) <- fasta_names
 
 # ==========================================
 # [Step 3] RUN LNCFINDER PREDICTIONS
 # ==========================================
-cat(">>> [Step 3] Computing LncFinder features and running SVM model...\n")
+cat(">>> [Step 3] Computing LncFinder structural features and running SVM model...\n")
 
 results <- lnc_finder(
-  Seqs,
-  Structures       = Structures,
-  SS.features      = TRUE,
-  format           = "DNA",
+  Sequences        = SS_List,     # Pass the structure list directly here!
+  SS.features      = TRUE,        # Keep secondary structure features active
+  format           = "SS",        # CHANGED: Must be "SS" when feeding structures
   frequencies.file = "wheat",
   svm.model        = "wheat",
   parallel.cores   = num_cores
 )
-
 # ==========================================
 # SAVE RESULTS
 # ==========================================
