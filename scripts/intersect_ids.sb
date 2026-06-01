@@ -19,7 +19,7 @@ DIAMOND="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/09_d
 echo -e ">>>Final intersect:\nInput files:\n${FEELnc}\n${CPAT}\n${lncFinder}\n${lncBoost}\n${DIAMOND}\n...\n"
 
 # Output files
-OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_output/10_final"
+OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_final"
 OUTPFX="${OUTDIR}/species" # set the filename prefix for the output files
 
 echo -e ">>>Final intersect:\nMaking output directory:\n${OUTDIR}\n...\n"
