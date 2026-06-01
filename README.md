@@ -158,9 +158,29 @@ These three steps result in the unfiltered candidate locations, sequences, and s
 12. `lncBoost.sb`
 13. `DIAMOND.sb`
 
-### Steps 14 - 16: Analysis of results
+### Step 14: Gather IDs that passed all filters
+
 14. `intersect_ids.sb`
-15. `minimap2.sb`
-16. `FEELnc_classifier.sb`
+
+Output includes a list of `StringTie` IDs that passed all of the filters from steps 9 through 13, and a summary file that outlines results from each of the five filters.
+
+### Step 15: Extracting lncRNA sequences from candidates
+
+Use `SeqKit` to pull lncRNA sequences that passed each of the filter steps from steps 9 thorugh 13
+
+```bash
+ml purge
+ml load SeqKit
+
+seqkit grep -f species/03_outputs/10_final/species_final.txt species/03_outputs/04_gffread/species_candidates.fasta -o species/03_outputs/10_final/species_lncRNA.fasta
+```
+
+### Step 16: Compare pipeline results to truth dataset
+
+16. `minimap2.sb`
+
+### Step 17: Classify lncRNAs
+
+17. `FEELnc_classifier.sb`
 
 ---
