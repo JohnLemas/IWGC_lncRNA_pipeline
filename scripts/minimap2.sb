@@ -4,9 +4,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=00:30:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
-
-echo -e "\n\tload files..\n"
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/11_verify/%x-%j.log.out
 
 # Paths
 PRED="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_final/species_lncRNA.fasta" # Final candidates after running the intersection
@@ -15,8 +13,6 @@ OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/11_ve
 OUT_FILE="${OUTDIR}/species_cd-hit-0.9_vs_pred.paf"
 
 mkdir -p $OUTDIR
-
-echo -e "\n\tload module..\n"
 
 ml purge
 ml load minimap2
