@@ -6,9 +6,9 @@ library(dplyr)
 
 # 1. Define command-line options
 option_list <- list(
-    make_option(c("-i", "--input"), type = "character", default = NULL, 
+    make_option(c("-i", "--input"), type = "character", default = NULL,
                 help = "Path to the FEELnc classification result file (e.g., lncRNA_classes.txt)", metavar = "character"),
-    make_option(c("-o", "--outdir"), type = "character", default = ".", 
+    make_option(c("-o", "--outdir"), type = "character", default = ".",
                 help = "Directory where output files should be saved [default: current directory]", metavar = "character")
 )
 
@@ -45,7 +45,7 @@ write_output <- function(data_frame, base_filename) {
 message("Processing data and writing to: ", opt$outdir)
 
 # Antisense_exonic-lncRNA
-df %>% 
+df %>%
     filter(X1 == 1, X6 == "antisense", X10 == "exonic") %>% 
     write_output("LncRNA_antisense_exonic.txt")
 
