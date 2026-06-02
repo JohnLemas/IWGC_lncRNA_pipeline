@@ -1,57 +1,75 @@
 #!/usr/bin/env Rscript
 
+library(optparse)
 library(readr)
 library(dplyr)
 
-input_file <- "lncRNA_classes.txt"
+# 1. Define command-line options
+option_list <- list(
+    make_option(c("-i", "--input"), type = "character", default = NULL, 
+                help = "Path to the FEELnc classification result file (e.g., lncRNA_classes.txt)", metavar = "character"),
+    make_option(c("-o", "--outdir"), type = "character", default = ".", 
+                help = "Directory where output files should be saved [default: current directory]", metavar = "character")
+)
 
-if (!file.exists(input_file)) {
-    stop(paste("Error: Input file", input_file, "not found in current working directory."))
+opt_parser <- OptionParser(option_list = option_list)
+opt <- parse_args(opt_parser)
+
+# 2. Validate input argument
+if (is.null(opt$input)) {
+    print_help(opt_parser)
+    stop("Error: Input file must be specified using -i or --input.", call. = FALSE)
 }
 
-message("Reading ", input_file, "...")
-
-# Read the file without headers. 
-# read_tsv automatically names columns X1, X2, X3... which maps perfectly to $1, $2, $3...
-df <- read_tsv(input_file, col_names = FALSE, show_col_types = FALSE)
-
-# Function to write outputs uniformly without headers or quotes, just like awk
-write_output <- function(data_frame, file_name) {
-    write_delim(data_frame, file_name, delim = "\t", col_names = FALSE)
+if (!file.exists(opt$input)) {
+    stop(paste("Error: Input file '", opt$input, "' does not exist."), call. = FALSE)
 }
 
-# 1. Antisense_exonic-lncRNA
-message("Processing: Antisense exonic...")
+# 3. Handle output directory creation if it doesn't exist
+if (!dir.exists(opt$outdir)) {
+    dir.create(opt$outdir, recursive = TRUE)
+}
+
+message("Reading ", opt$input, "...")
+
+# Read the file without headers (X1, X2... map to $1, $2...)
+df <- read_tsv(opt$input, col_names = FALSE, show_col_types = FALSE)
+
+# Helper function to join output directory path and write file
+write_output <- function(data_frame, base_filename) {
+    target_path <- file.path(opt$outdir, base_filename)
+    write_delim(data_frame, target_path, delim = "\t", col_names = FALSE)
+}
+
+# 4. Filter and write out files using dplyr logic
+message("Processing data and writing to: ", opt$outdir)
+
+# Antisense_exonic-lncRNA
 df %>% 
     filter(X1 == 1, X6 == "antisense", X10 == "exonic") %>% 
     write_output("LncRNA_antisense_exonic.txt")
 
-# 2. Intronic-lncRNA
-message("Processing: Intronic...")
+# Intronic-lncRNA
 df %>% 
     filter(X1 == 1, X6 == "sense", X10 == "intronic") %>% 
     write_output("LncRNA_intronic.txt")
 
-# 3. Upstream-lncRNA
-message("Processing: Upstream...")
+# Upstream-lncRNA
 df %>% 
     filter(X1 == 1, X6 == "sense", X7 == "intergenic", X8 <= 2000, X10 == "upstream") %>% 
     write_output("LncRNA_upstream.txt")
 
-# 4. Downstream-lncRNA
-message("Processing: Downstream...")
+# Downstream-lncRNA
 df %>% 
     filter(X1 == 1, X6 == "sense", X7 == "intergenic", X8 <= 2000, X10 == "downstream") %>% 
     write_output("LncRNA_downstream.txt")
 
-# 5. Intergenic-lncRNA
-message("Processing: Intergenic...")
+# Intergenic-lncRNA
 df %>% 
     filter(X1 == 1, X7 == "intergenic", X8 > 2000) %>% 
     write_output("LncRNA_intergenic.txt")
 
-# 6. Bidirectional-lncRNA
-message("Processing: Bidirectional...")
+# Bidirectional-lncRNA
 df %>% 
     filter(X1 == 1, X6 == "antisense", X7 == "intergenic", X8 <= 2000, X10 == "upstream") %>% 
     write_output("LncRNA_Bidirectional.txt")
