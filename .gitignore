@@ -1,4 +1,45 @@
-# 1. Global file extensions to ignore everywhere
+# 1. Ignore absolutely everything by default at the root
+*
+# But don't ignore the gitignore file itself
+!.gitignore
+
+# 2. Allow Git to look inside the species directories
+!/g.max/
+!/z.mays/
+
+# 3. Ignore everything inside the species folders by default
+# (This catches README.md, md5sum.txt, ncbi_dataset, .zip files, etc.)
+/g.max/*
+/z.mays/*
+
+# 4. Whitelist the inputs directory and its contents
+!/g.max/01_inputs/
+!/g.max/01_inputs/**
+!/z.mays/01_inputs/
+!/z.mays/01_inputs/**
+
+# 5. Allow Git to look into outputs, but keep it empty by default
+!/g.max/03_outputs/
+/g.max/03_outputs/*
+!/z.mays/03_outputs/
+/z.mays/03_outputs/*
+
+# 6. Whitelist ONLY your specific output subdirectories
+!/g.max/03_outputs/10_intersect/
+!/g.max/03_outputs/10_intersect/**
+!/g.max/03_outputs/11_classify/
+!/g.max/03_outputs/11_classify/**
+!/g.max/03_outputs/12_verify/
+!/g.max/03_outputs/12_verify/**
+
+!/z.mays/03_outputs/10_intersect/
+!/z.mays/03_outputs/10_intersect/**
+!/z.mays/03_outputs/11_classify/
+!/z.mays/03_outputs/11_classify/**
+!/z.mays/03_outputs/12_verify/
+!/z.mays/03_outputs/12_verify/**
+
+# 7. Global large file safety net (just in case they are inside whitelisted folders)
 *fa
 *gtf
 *gff3
@@ -8,30 +49,3 @@
 .DS_Store
 *gene_info.txt
 .Rhistory
-
-# 2. Prevent Git from ignoring the top-level species directories
-!/g.max/
-!/z.mays/
-
-# 3. Explicitly ignore scripts and truth data
-/truth_data/
-/g.max/02_scripts/
-/z.mays/02_scripts/
-
-# 4. The Trick: Allow Git into the outputs folder, but ignore its general contents
-!/g.max/03_outputs/
-/g.max/03_outputs/*
-!/z.mays/03_outputs/
-/z.mays/03_outputs/*
-
-# 5. Whitelist the specific subdirectories you want to keep
-!/g.max/03_outputs/10_intersect/
-!/z.mays/03_outputs/10_intersect/
-!/g.max/03_outputs/11_classify/
-!/z.mays/03_outputs/11_classify/
-!/g.max/03_outputs/12_verify/
-!/z.mays/03_outputs/12_verify/
-
-# 6. Allow everything inside 01_inputs (since it wasn't blocked by a parent)
-!/g.max/01_inputs/
-!/z.mays/01_inputs/
