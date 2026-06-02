@@ -158,33 +158,14 @@ These three steps result in the unfiltered candidate locations, sequences, and s
 12. `lncBoost.sb`
 13. `DIAMOND.sb`
 
-### Step 14: Gather IDs that passed all filters
+### Step 14: Intersect predictions and classify high-confidence lncRNAs
 
-14. `intersect_ids.sb`
+14. `intersect_classify.sb`
 
-Output includes a list of `StringTie` IDs that passed all of the filters from steps 9 through 13, and a summary file that outlines results from each of the five filters.
+This step merges output from all ML tools producing a `.txt` file with `StringTie` gene IDs for candidates that passed all filters and a table of concensus information. It then uses `FEELnc_classify.pl` to classify each predicted lncRNA. `intersect_classify.sb` eliminates the need for multiple R based images and handles all of the data parsing and file generation in one ~5 minute step using `intersect_ids.R` and `classifications.R`. 
 
-### Step 15: Extracting lncRNA sequences from candidates
-
-Use `SeqKit` and `grep` to pull lncRNA sequences that passed each of the filter steps from steps 9 thorugh 13
-
-```bash
-# Pull final sequences
-ml purge
-ml load SeqKit
-
-seqkit grep -f species/03_outputs/10_final/species_final.txt species/03_outputs/04_gffread/species_candidates.fasta -o species/03_outputs/10_final/species_lncRNA.fasta
-
-# Pull stringtie annotations
-grep -Fwf species/03_outputs/10_final/species_final.txt species/03_outputs/03_stringtie/species_candidates.gtf > species_lncRNA.gtf
-```
-
-### Step 16: Compare pipeline results to truth dataset
+### Step 15: Compare pipeline results to truth dataset
 
 16. `minimap2.sb`
-
-### Step 17: Classify lncRNAs
-
-17. `FEELnc_classifier.sb`
 
 ---
