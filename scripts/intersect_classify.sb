@@ -2,14 +2,14 @@
 #SBATCH --job-name=species_finalize
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
-#SBATCH --time=2:00:00
+#SBATCH --time=00:30:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/tester/%x_%j.out
 
-date
 # Fix the locale warnings and suppress the systemd/timedatectl warning from R packages
 export LC_ALL=C
 export LANG=C
 export TZ="UTC"
+date
 
 # R parsing image
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools.sif"
