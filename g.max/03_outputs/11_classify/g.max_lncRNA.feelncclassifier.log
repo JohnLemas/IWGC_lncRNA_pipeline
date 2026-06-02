@@ -1,0 +1,10 @@
+#FEELnc Classification
+#lncRNA file :  lncrna : /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/g.max/03_outputs/10_intersect/g.max_lncRNA.gtf 
+#mRNA file : /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/g.max/01_inputs/g.max_mRNA.gtf
+#Minimal window size : 10000
+#Maximal window size : 100000
+#Number of lncRNA : 2570 
+#Number of mRNA : 92999
+#Number of interaction : 10253 
+#Number of lncRNA without interaction : 15
+#List of lncRNA without interaction : MSTRG.25730.3 MSTRG.33757.3 MSTRG.7530.4 MSTRG.31673.1 MSTRG.31672.1 MSTRG.25895.1 MSTRG.31676.1 MSTRG.25868.1 MSTRG.7530.1 MSTRG.33677.1 MSTRG.19010.1 MSTRG.7530.3 MSTRG.18862.1 MSTRG.33757.2 MSTRG.7530.2
