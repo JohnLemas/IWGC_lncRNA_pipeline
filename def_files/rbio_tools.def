@@ -2,8 +2,8 @@ Bootstrap: docker
 From: ubuntu:22.04
 
 %files
-    /mnt/scratch/lemasjoh/BASF/scripts/intersect_ids.R /usr/local/bin/intersect_ids.R
-    /mnt/scratch/lemasjoh/BASF/scripts/classifications.R /usr/local/bin/classifications.R
+    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/intersect_ids.R /usr/local/bin/intersect_ids.R
+    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/classifications.R /usr/local/bin/classifications.R
 
 %post
     export DEBIAN_FRONTEND=noninteractive
