@@ -24,8 +24,10 @@
 
 # Ignore everything in here
 /truth_data/
-/g.max/
-/z.mays/
+/g.max/02_scripts/
+/z.mays/02_scripts/
+/g.max/03_outputs/
+/z.mays/03_outputs/
 
 # But keep some stuff
 !/g.max/03_outputs/10_intersect/*
