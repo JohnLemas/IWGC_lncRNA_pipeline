@@ -7,10 +7,12 @@
 
 # 1. Paths to your files
 IMG="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/FEELnc.sif"
-FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/FEELnc"
+FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/feelnc"
 LNC_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_final/species_lncRNA.gtf"
 mRNA_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_final"
+OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/12_classify"
+
+mkdir -p $OUT_DIR
 
 # 2. Run the classifier
 # We use --env to pass the library path INTO the container
@@ -22,4 +24,4 @@ singularity exec \
     -a $mRNA_GTF \
     -w 10000 \
     -m 100000 \
-    -v 1 > ${OUT_DIR}/soy_lncRNA_classes.txt
+    -v 1 > ${OUT_DIR}/species_lncRNA_classes.txt
