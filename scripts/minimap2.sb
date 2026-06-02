@@ -7,7 +7,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/11_verify/%x-%j.log.out
 
 # Paths
-PRED="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_final/species_lncRNA.fasta" # Final candidates after running the intersection
+PRED="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_intersect/species_lncRNA.fasta" # Final candidates after running the intersection
 TRUTH="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/truth_data/species/species_PLncDB_cd-hit.0.9.fa" # Truth dataset: EV sequences clustered at 90% identity with cd-hit. 
 OUTDIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/12_verify"
 OUT_FILE="${OUTDIR}/species_cd-hit-0.9_vs_pred.paf"
