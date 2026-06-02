@@ -166,13 +166,17 @@ Output includes a list of `StringTie` IDs that passed all of the filters from st
 
 ### Step 15: Extracting lncRNA sequences from candidates
 
-Use `SeqKit` to pull lncRNA sequences that passed each of the filter steps from steps 9 thorugh 13
+Use `SeqKit` and `grep` to pull lncRNA sequences that passed each of the filter steps from steps 9 thorugh 13
 
 ```bash
+# Pull final sequences
 ml purge
 ml load SeqKit
 
 seqkit grep -f species/03_outputs/10_final/species_final.txt species/03_outputs/04_gffread/species_candidates.fasta -o species/03_outputs/10_final/species_lncRNA.fasta
+
+# Pull stringtie annotations
+grep -Fwf species/03_outputs/10_final/species_final.txt species/03_outputs/03_stringtie/species_candidates.gtf > species_lncRNA.gtf
 ```
 
 ### Step 16: Compare pipeline results to truth dataset
