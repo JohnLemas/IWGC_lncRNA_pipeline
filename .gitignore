@@ -41,6 +41,7 @@
 
 # 7. Global large file safety net (just in case they are inside whitelisted folders)
 *fa
+*fai
 *gtf
 *gff3
 *gff
@@ -49,3 +50,5 @@
 .DS_Store
 *gene_info.txt
 .Rhistory
+g.max_indexed/
+z.mays_indexed/
