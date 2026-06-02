@@ -1,6 +1,10 @@
 Bootstrap: docker
 From: ubuntu:22.04
 
+%files
+    /mnt/scratch/lemasjoh/BASF/scripts/intersect_ids.R /usr/local/bin/intersect_ids.R
+    /mnt/scratch/lemasjoh/BASF/scripts/classifications.R /usr/local/bin/classifications.R
+
 %post
     export DEBIAN_FRONTEND=noninteractive
     apt-get update && apt-get install -y \
@@ -8,16 +12,13 @@ From: ubuntu:22.04
         r-cran-tidyverse \
         r-cran-optparse \
         r-cran-readr \
-        r-cran-dplyr
+        r-cran-dplyr \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
 
     # Ensure the scripts are in the system path and executable
     chmod +x /usr/local/bin/intersect_ids.R
     chmod +x /usr/local/bin/classifications.R
-
-%files
-    # Copy both of your existing R scripts into the image
-    /mnt/scratch/lemasjoh/BASF/scripts/intersect_ids.R /usr/local/bin/intersect_ids.R
-    /mnt/scratch/lemasjoh/BASF/scripts/classifications.R /usr/local/bin/classifications.R
 
 %environment
     export LC_ALL=C
