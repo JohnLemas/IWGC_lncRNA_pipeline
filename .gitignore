@@ -1,3 +1,4 @@
+# Ignore these large files
 *fa
 *gtf
 *gff3
@@ -5,11 +6,25 @@
 *gtf
 *gz
 *sif
-*.DS_Store
+.DS_Store
 *gene_info.txt
+.Rhistory
+
+# Look in these directories
 !/g.max/
 !/z.mays/
+
+# Ignore everything in here
 /truth_data/
 /g.max/*
 /z.mays/*
-.Rhistory
+
+# But keep some stuff
+/g.max/01_inputs/*
+/z.mays/01_inputs/*
+!/g.max/03_outputs/10_intersect/*
+!/z.mays/03_outputs/10_intersect/*
+!/g.max/03_outputs/11_classify/*
+!/z.mays/03_outputs/11_classify/*
+!/g.max/03_outputs/12_verify/*
+!/z.mays/03_outputs/12_verify/*
