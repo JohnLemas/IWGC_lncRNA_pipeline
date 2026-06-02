@@ -41,6 +41,8 @@
 
 # 7. Global large file safety net (just in case they are inside whitelisted folders)
 *fa
+*fasta
+*paf
 *fai
 *gtf
 *gff3
