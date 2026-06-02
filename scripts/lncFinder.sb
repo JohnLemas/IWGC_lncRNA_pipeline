@@ -15,13 +15,23 @@ STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
 
 mkdir -p $OUTPUT_DIR
 
+scho "=========================================================="
+echo "Filtering candidates for secondary structure generations"
+echo "=========================================================="
+
+ml purge
+ml load SeqKit
+
+# Filter the candidates to only those that are between 200 and 100,000 nt in length (lncRNA length range)
+seqkit seq -m 200 -M 100000 $INPUT_FASTA > "$OUTPUT_DIR/filtered_candidates.fasta"
+
 echo "=========================================================="
 echo "STARTING STEP 1: Native Stream RNA Folding via lncFinder image"
 echo "=========================================================="
 date
 
 singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
-    RNAfold --noPS --jobs=$SLURM_CPUS_PER_TASK < "$INPUT_FASTA" > "$STRUCT_TXT"
+    RNAfold --noPS --jobs=$SLURM_CPUS_PER_TASK < "$OUTPUT_DIR/filtered_candidates.fasta" > "$STRUCT_TXT"
 
 echo "=========================================================="
 echo "STARTING STEPS 2 & 3: Parsing and LncFinder Matrix Processing"
