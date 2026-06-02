@@ -55,12 +55,12 @@ ml load SeqKit
 # Pull the fasta sequences for the final lncRNA IDs
 cmd2="seqkit grep -f ${INT_PFX}_final_ids.txt ${CAN_SEQS} > ${INT_PFX}_lncRNA.fasta"
 echo -e ">>> Pulling sequences...\n${cmd2}\n"
-$cmd2
+seqkit grep -f ${INT_PFX}_final_ids.txt ${CAN_SEQS} > ${INT_PFX}_lncRNA.fasta
 
 # Pull the gtf entries for the final lncRNA IDs
 cmd3="grep -Fwf ${INT_PFX}_final_ids.txt ${CAN_GTF} > ${INT_PFX}_lncRNA.gtf"
 echo -e ">>> Pulling GTF entries...\n${cmd3}\n"
-$cmd3
+grep -Fwf ${INT_PFX}_final_ids.txt ${CAN_GTF} > ${INT_PFX}_lncRNA.gtf
 
 # =======>------- Classify lncRNAs -------<======== #
 
