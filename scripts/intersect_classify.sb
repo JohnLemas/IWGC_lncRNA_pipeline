@@ -5,6 +5,7 @@
 #SBATCH --time=2:00:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/tester/%x_%j.out
 
+date
 # Fix the locale warnings and suppress the systemd/timedatectl warning from R packages
 export LC_ALL=C
 export LANG=C
@@ -96,3 +97,4 @@ echo -e ">>> Running classification script...\n${cmd4}\n"
 $cmd4
 
 echo -e ">>>Classification complete."
+date
