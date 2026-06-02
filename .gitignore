@@ -13,15 +13,21 @@
 # Look in these directories
 !/g.max/
 !/z.mays/
+!/g.max/03_outputs/10_intersect/
+!/z.mays/03_outputs/10_intersect/
+!/g.max/03_outputs/11_classify/
+!/z.mays/03_outputs/11_classify/
+!/g.max/03_outputs/12_verify/
+!/z.mays/03_outputs/12_verify/
+!/g.max/01_inputs/
+!/z.mays/01_inputs/
 
 # Ignore everything in here
 /truth_data/
-/g.max/*
-/z.mays/*
+/g.max/
+/z.mays/
 
 # But keep some stuff
-/g.max/01_inputs/*
-/z.mays/01_inputs/*
 !/g.max/03_outputs/10_intersect/*
 !/z.mays/03_outputs/10_intersect/*
 !/g.max/03_outputs/11_classify/*
