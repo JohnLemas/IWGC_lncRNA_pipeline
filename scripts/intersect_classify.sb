@@ -5,9 +5,10 @@
 #SBATCH --time=2:00:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/tester/%x_%j.out
 
-# Fix the locale warnings by setting LC_ALL and LANG to C (or en_US.UTF-8 if you prefer). This ensures that the script runs without locale-related issues, especially when processing text files with different encodings.
+# Fix the locale warnings and suppress the systemd/timedatectl warning from R packages
 export LC_ALL=C
 export LANG=C
+export TZ="UTC"
 
 # R parsing image
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools.sif"
@@ -73,7 +74,8 @@ CLASS_OUT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/tester/classify"
 mkdir -p $CLASS_OUT
 
 # 2. Run the classifier
-# We use --env to pass the library path INTO the container
+echo -e ">>> Running FEELnc_classifier.pl...\n"
+# FIX: Removed the backticks surrounding the output text file redirect
 singularity exec \
   --env PERL5LIB="${FEELNC_DIR}/lib" \
   $FEELnc_IMG \
@@ -82,13 +84,13 @@ singularity exec \
     -a $mRNA_GTF \
     -w 10000 \
     -m 100000 \
-    -v 1 > `${CLASS_OUT}/species_lncRNA_classes.txt`
+    -v 1 > "${CLASS_OUT}/species_lncRNA_classes.txt"
 
 # 3. Parse output file
 CLASS_SCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/tester/classifications.R"
-CLASS_PFX="${CLASS_OUT}/species"
 
-cmd4="singularity exec $IMAGE Rscript $CLASS_SCRIPT -i ${CLASS_OUT}/species_lncRNA_classes.txt -o $CLASS_PFX" # save run command in log file
+# FIX: Passed the directory $CLASS_OUT straight to -o since classifications.R uses dir.create() and handles filenames itself
+cmd4="singularity exec $IMAGE Rscript $CLASS_SCRIPT -i ${CLASS_OUT}/species_lncRNA_classes.txt -o $CLASS_OUT"
 
 echo -e ">>> Running classification script...\n${cmd4}\n"
 $cmd4
