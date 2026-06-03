@@ -6,6 +6,9 @@
 # 2. Allow Git to look inside the species directories
 !/g.max/
 !/z.mays/
+!/def_files/
+!/scripts/
+!/truth_data/
 
 # 3. Ignore everything inside the species folders by default
 # (This catches README.md, md5sum.txt, ncbi_dataset, .zip files, etc.)
