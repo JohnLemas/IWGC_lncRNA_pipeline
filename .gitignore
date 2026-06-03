@@ -1,33 +1,37 @@
-# 1. Ignore absolutely everything by default at the root
-*
-# But don't ignore the gitignore file itself
-!.gitignore
+# ==============================================================================
+# 1. ROOT DIRECTORIES TO COMPLETION BLOCK
+# ==============================================================================
+/corn/
+/soy/
+/uniprot_db/
 
-# 2. Allow Git to look inside the species directories
+# Block the specific loose root-level files you didn't want earlier
+Fourier1_lncRNA.csv
+Fourier2_lncRNA.csv
+ORF_lncRNA.csv
+
+# ==============================================================================
+# 2. SPECIES DIRECTORY SURGERY (g.max & z.mays)
+# ==============================================================================
+# Allow Git into these folders, but ignore their general contents by default
 !/g.max/
-!/z.mays/
-!/def_files/
-!/scripts/
-!/truth_data/
-
-# 3. Ignore everything inside the species folders by default
-# (This catches README.md, md5sum.txt, ncbi_dataset, .zip files, etc.)
 /g.max/*
+!/z.mays/
 /z.mays/*
 
-# 4. Whitelist the inputs directory and its contents
+# Whitelist the inputs directory and everything inside it
 !/g.max/01_inputs/
 !/g.max/01_inputs/**
 !/z.mays/01_inputs/
 !/z.mays/01_inputs/**
 
-# 5. Allow Git to look into outputs, but keep it empty by default
+# Allow Git into the outputs directory, but keep it empty by default
 !/g.max/03_outputs/
 /g.max/03_outputs/*
 !/z.mays/03_outputs/
 /z.mays/03_outputs/*
 
-# 6. Whitelist ONLY your specific output subdirectories
+# Whitelist ONLY your 3 specific output subdirectories
 !/g.max/03_outputs/10_intersect/
 !/g.max/03_outputs/10_intersect/**
 !/g.max/03_outputs/11_classify/
@@ -42,11 +46,12 @@
 !/z.mays/03_outputs/12_verify/
 !/z.mays/03_outputs/12_verify/**
 
-# 7. Global large file safety net (just in case they are inside whitelisted folders)
+# ==============================================================================
+# 3. GLOBAL LARGE FILE SAFETY NET (Blocks these formats everywhere)
+# ==============================================================================
 *fa
 *fasta
 *paf
-*fai
 *gtf
 *gff3
 *gff
@@ -55,5 +60,3 @@
 .DS_Store
 *gene_info.txt
 .Rhistory
-g.max_indexed/
-z.mays_indexed/
