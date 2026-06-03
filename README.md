@@ -131,41 +131,30 @@ Once all the inputs have been gathered and the species working directory is crea
 4. `alignment_array.sb`
 5. `bam_indexing.sb`
 6. `stringtie_assemble.sb`
+
+### Step 7: Merging assemblies and gathering candidates
+
 7. `stringtie_merge.sb`
 
-### Step 8: Gathering Candidates
-Once the merge step is complete, the output `gtf` file contains all of the aligned sequence locations and any information about an overlapping mRNA in that region. To obtain candidate lncRNAs, `grep` for all of the aligned locations that did not overlap already annotated protein coding regions:
+Once the merge step is complete, the output `gtf` file contains all of the aligned sequence locations and any information about an overlapping mRNA in that region. This script parses out transcripts that did not overlap with mRNA locations in the master output gtf file and outputs `candidates.gtf` and `candidates.fasta`. These unfiltered candidate locations, sequences, and stringtie transcript IDs are used in all of the following *ab initio* prediction models.
 
-```bash
-# Pull 'novel' StringTie IDs from merged gtf file
-grep 'transcript_id "MSTRG' merge.gtf > candidates.gtf
-
-# Write out the candidate sequences using the reference genome
-gffread -w candidates.fasta -g species.chromosomes.fa candidates.gtf
-
-# Create a list of unique candidate transcript IDs for later
-grep '>' candidates.fasta | sed 's/>//g' | sort -u > candidates.txt
-```
-
-These three steps result in the unfiltered candidate locations, sequences, and stringtie transcript IDs, which are used in all of the following *ab initio* prediction models.
-
-### Steps 9 - 13: Running the models
+### Steps 8 - 12: Running the models
 *Note that each of the models can run simultaneously*
 
-9. `FEELnc_filter.sb`
-10. `cpat.sb`
-11. `lncFinder.sb`
-12. `lncBoost.sb`
-13. `DIAMOND.sb`
+8. `FEELnc_filter.sb`
+9. `cpat.sb`
+10. `lncFinder.sb`
+11. `lncBoost.sb`
+12. `DIAMOND.sb`
 
-### Step 14: Intersect predictions and classify high-confidence lncRNAs
+### Step 13: Intersect predictions and classify high-confidence lncRNAs
 
-14. `intersect_classify.sb`
+13. `intersect_classify.sb`
 
 This step merges output from all ML tools producing a `.txt` file with `StringTie` gene IDs for candidates that passed all filters and a table of concensus information. It then uses `FEELnc_classify.pl` to classify each predicted lncRNA. `intersect_classify.sb` eliminates the need for multiple R based images and handles all of the data parsing and file generation in one ~5 minute step using `intersect_ids.R` and `classifications.R`. 
 
-### Step 15: Compare pipeline results to truth dataset
+### Step 14: Compare pipeline results to truth dataset
 
-16. `minimap2.sb`
+14. `minimap2.sb`
 
 ---
