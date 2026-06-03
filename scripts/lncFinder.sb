@@ -1,7 +1,7 @@
 #!/bin/bash --login
 #SBATCH --job-name=species_lncFinder
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --time=06:00:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
@@ -15,8 +15,8 @@ STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
 
 mkdir -p $OUTPUT_DIR
 
-scho "=========================================================="
-echo "Filtering candidates for secondary structure generations"
+echo "=========================================================="
+echo "Filtering candidates for secondary structure algorithm (200-100,000 nt)"
 echo "=========================================================="
 
 ml purge
