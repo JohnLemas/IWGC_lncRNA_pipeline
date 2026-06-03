@@ -1,14 +1,16 @@
 #!/bin/bash --login
 #SBATCH --job-name=species_track
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
-#SBATCH --time=01:00:00
+#SBATCH --mem=8G
+#SBATCH --time=00:15:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 SRR_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/SRR_assemblies"
 OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/13_trace"
 REF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
 LIST="$OUT_DIR/sra_file_list.txt"
+
+mkdir -p $OUT_DIR
 
 ls -d $SRR_DIR/SRR*_assembled.gtf > $LIST
 
