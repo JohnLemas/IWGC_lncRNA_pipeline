@@ -1,5 +1,5 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_lncFinder
+#SBATCH --job-name=species_RNAfold
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
 #SBATCH --time=12:00:00 # based on the 132k candidates in the Z. mays run after the filtering step
@@ -25,7 +25,7 @@ ml load SeqKit
 seqkit seq -m 200 -M 100000 $INPUT_FASTA > "$OUTPUT_DIR/filtered_candidates.fasta"
 
 echo "=========================================================="
-echo "STARTING STEP 1: Native Stream RNA Folding via lncFinder image"
+echo "Native Stream RNA Folding via RNAfold image"
 echo "=========================================================="
 date
 
