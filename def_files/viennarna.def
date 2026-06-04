@@ -14,18 +14,18 @@ From: ubuntu:22.04
 %post
     export DEBIAN_FRONTEND=noninteractive
 
-    # 1. Install system dependencies & building prerequisites
+    # 1. Install system dependencies, building prerequisites, and pkg-config
     apt-get update && apt-get install -y --no-install-recommends \
         wget \
         ca-certificates \
         build-essential \
         gfortran \
         libgomp1 \
+        pkg-config \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
     # 2. Download and Compile ViennaRNA from official Source 
-    # Bypasses all PPA/Apt-Key permission errors completely
     cd /tmp
     wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_7_x/ViennaRNA-2.7.2.tar.gz
     tar -zxvf ViennaRNA-2.7.2.tar.gz
