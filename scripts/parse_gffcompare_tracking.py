@@ -38,40 +38,39 @@ def main():
         print(f"Error: Tracking file not found at {TRACKING_FILE}")
         sys.exit(1)
 
-    # Biological codes:
-    # = (Exact), j (Splicing compatible)
-    # c (Exonic containment - very common for novel lncRNA runs)
-    # m (Intronic/Exonic retention overlap)
+    # Biological codes to capture structural overlap/containment
     TARGET_CODES = {"=", "j", "c", "m"}
 
     with open(TRACKING_FILE, "r") as f:
         for line in f:
             parts = line.strip().split("\t")
-            if len(parts) < 5:
+            if len(parts) < 4:
                 continue
                 
-            # Parse components handling potential pipe splits
+            # Adjusted Indices based on your file layout:
+            # Col 0: TCONS ID
+            # Col 1: XLOC ID
+            # Col 2: MSTRG ID (Reference column)
+            # Col 3: Class Code
+            # Col 4 onwards: SRA sample columns
             tcons_raw = parts[0].split("|")[0]
             ref_raw = parts[2]
-            class_code = parts[4]
-            sra_columns = parts[5:]
+            class_code = parts[3].strip()  # Fix: shifted to index 3
+            sra_columns = parts[4:]        # Fix: shifted to index 4
             
-            # Extract clean candidate identifier
+            # Extract clean candidate identifier (e.g., from MSTRG.64|MSTRG.64.4 -> MSTRG.64.4)
             if ref_raw != "-" and ref_raw.strip() != "":
-                # If it looks like MSTRG.64|MSTRG.64.4, take the specific transcript ID (the second element)
                 ref_parts = ref_raw.split("|")
                 candidate_id = ref_parts[1] if len(ref_parts) > 1 else ref_parts[0]
             else:
                 candidate_id = tcons_raw
             
-            # Check if class code represents true overlap/sharing
             if class_code in TARGET_CODES:
                 sras_present = []
                 
                 for idx, cell in enumerate(sra_columns):
                     if idx >= len(sra_names):
                         break
-                    # If cell isn't a dash, the SRA hit exists
                     if cell.strip() != "-":
                         sras_present.append(sra_names[idx])
                 
@@ -84,12 +83,10 @@ def main():
                     })
 
     if not rows:
-        print("\n[ERROR]: No rows extracted. Please double check that target codes match.")
+        print("\n[ERROR]: No rows extracted. Please double check column positions or codes.")
         sys.exit(1)
 
     df = pd.DataFrame(rows)
-    
-    # Sort and write to CSV
     df = df.sort_values(by="SRA_Count", ascending=False)
     df.to_csv(OUTPUT_CSV, index=False)
 
