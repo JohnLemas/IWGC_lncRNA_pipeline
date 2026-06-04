@@ -7,7 +7,7 @@
 
 # Paths
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/lncfinder.sif"
-RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/02_scripts/lncFinder.R"
+RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R"
 
 INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
 OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
