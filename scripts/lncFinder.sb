@@ -6,7 +6,7 @@
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # Paths
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/lncfinder.sif"
+IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
 RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R"
 
 INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"

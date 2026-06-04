@@ -12,7 +12,7 @@ export TZ="UTC"
 date
 
 # R parsing image for output files
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools.sif"
+IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
 
 # =======>------- Intersect IDs -------<======== #
 
