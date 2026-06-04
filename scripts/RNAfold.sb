@@ -2,19 +2,15 @@
 #SBATCH --job-name=species_lncFinder
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128G
-#SBATCH --time=06:00:00
+#SBATCH --time=12:00:00 # based on the 132k candidates in the Z. mays run after the filtering step
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # Paths
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
-RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R"
+IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/viennarna.sif"
 
 INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
 OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
 STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
-
-# Final output CSV file for lncFinder results
-OUTPUT_CSV="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_results.csv"
 
 mkdir -p $OUTPUT_DIR
 
@@ -35,3 +31,5 @@ date
 
 singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
     RNAfold --noPS --jobs=$SLURM_CPUS_PER_TASK < "$OUTPUT_DIR/filtered_candidates.fasta" > "$STRUCT_TXT"
+
+date
