@@ -13,6 +13,9 @@ INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/
 OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
 STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
 
+# Final output CSV file for lncFinder results
+OUTPUT_CSV="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_results.csv"
+
 mkdir -p $OUTPUT_DIR
 
 echo "=========================================================="
@@ -40,7 +43,10 @@ date
 
 # Run the unified R script inside the container
 singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
-    Rscript $RSCRIPT
+    Rscript $RSCRIPT \
+    -s "$STRUCT_TXT" \
+    -o "$OUTPUT_CSV" \
+    -p $SLURM_CPUS_PER_TASK
 
 echo "=========================================================="
 echo "PIPELINE FINISHED SUCCESSFULLY"
