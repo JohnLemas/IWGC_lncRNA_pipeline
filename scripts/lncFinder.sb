@@ -1,15 +1,15 @@
 #!/bin/bash --login
 #SBATCH --job-name=species_lncFinder
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
-#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=128G
+#SBATCH --time=1-00:00:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
 # Paths
 IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
 RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R"
 OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
-STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
+INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
 OUTPUT_CSV="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_results.csv"
 
 mkdir -p $OUTPUT_DIR
@@ -22,7 +22,7 @@ date
 # Run the unified R script inside the container
 singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
     Rscript $RSCRIPT \
-    -s "$STRUCT_TXT" \
+    -i "$INPUT_FASTA" \
     -o "$OUTPUT_CSV" \
     -p $SLURM_CPUS_PER_TASK
 

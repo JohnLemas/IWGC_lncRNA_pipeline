@@ -1,71 +1,50 @@
 #!/usr/bin/env Rscript
-
-# Load required libraries
-if (!requireNamespace("optparse", quietly = TRUE)) {
-  stop("CRITICAL ERROR: The 'optparse' package is required but not installed in this container.", call. = FALSE)
-}
 library(optparse)
+library(seqinr)
 library(LncFinder)
 
 # ==========================================
 # DEFINE EXPECTED COMMAND-LINE FLAGS
 # ==========================================
 option_list <- list(
-  make_option(c("-s", "--struct"), type = "character", default = NULL,
-              help = "Path to the raw input folded_structures.txt file from RNAfold", 
-              metavar = "character"),
+  make_option(c("-i", "--fasta"), type = "character", default = NULL,
+              help = "Path to the full candidate FASTA file", metavar = "character"),
   make_option(c("-o", "--out"), type = "character", default = NULL,
-              help = "Path where the output results CSV should be saved", 
-              metavar = "character"),
+              help = "Path where the output results CSV should be saved", metavar = "character"),
   make_option(c("-p", "--cores"), type = "integer", default = 1,
-              help = "Number of parallel CPU cores to use [default %default]", 
-              metavar = "integer")
+              help = "Number of parallel CPU cores to use [default %default]", metavar = "integer")
 )
 
-# Parse the incoming arguments
-opt_parser <- OptionParser(option_list = option_list)
-opt <- parse_args(opt_parser)
+opt <- parse_args(OptionParser(option_list = option_list))
 
-# Validate mandatory flags
-if (is.null(opt$struct) || is.null(opt$out)) {
-  print_help(opt_parser)
-  stop("CRITICAL ERROR: Both flags -s/--struct and -o/--out must be provided.\n", call. = FALSE)
+if (is.null(opt$fasta) || is.null(opt$out)) {
+  stop("CRITICAL ERROR: Both flags -i/--fasta and -o/--out must be provided.\n", call. = FALSE)
 }
 
-cat("==========================================================\n")
-cat("Running LncFinder with Named Flags:\n")
-cat(sprintf("  Input Structure File (-s): %s\n", opt$struct))
-cat(sprintf("  Output Results CSV   (-o): %s\n", opt$out))
-cat(sprintf("  Parallel Cores       (-p): %d\n", opt$cores))
-cat("==========================================================\n")
+# ==========================================
+# STEP 1: LOAD & FILTER FASTA IN R
+# ==========================================
+cat(">>> [Step 1] Loading and filtering FASTA dataset natively in memory...\n")
+raw_fasta <- read.fasta(opt$fasta, seqtype = "DNA", as.string = TRUE)
+
+# Filter out sequences longer than 50,000 nt to prevent O(n^3) computational explosion
+seq_lengths <- sapply(raw_fasta, nchar)
+filtered_fasta <- raw_fasta[seq_lengths >= 200 & seq_lengths <= 50000]
+
+cat(sprintf(">>> Filtered out %d outlier sequences. Processing %d valid candidates.\n",
+            length(raw_fasta) - length(filtered_fasta), length(filtered_fasta)))
 
 # ==========================================
-# LOAD STRUCTURE DATA VIA LNCFINDER NATIVE PARSER
+# STEP 2 & 3: INTERNAL FOLDING & PREDICTION
 # ==========================================
-cat(">>> [Step 2] Loading secondary structures using native read_SS parser...\n")
+cat(">>> [Step 2] Computing secondary structures and running SVM model natively...\n")
 
-if (!file.exists(opt$struct)) {
-  stop(sprintf("CRITICAL ERROR: The structure file '%s' does not exist!", opt$struct), call. = FALSE)
-}
-
-# Parse the single combined file 
-SS_Raw <- read_SS(oneFile.loc = opt$struct, separateFile = FALSE, withMFE = TRUE)
-
-# Convert to a clean Data Frame to prevent dimensions errors
-SS_List <- as.data.frame(SS_Raw, stringsAsFactors = FALSE)
-
-cat(sprintf(">>> Successfully loaded structured dataframe with %d rows and %d columns.\n", 
-            nrow(SS_List), ncol(SS_List)))
-
-# ==========================================
-# [Step 3] RUN LNCFINDER PREDICTIONS
-# ==========================================
-cat(">>> [Step 3] Computing LncFinder structural features and running SVM model...\n")
-
+# By passing format = "DNA" and SS.features = TRUE, LncFinder calls its internal
+# RNAfold algorithm directly. This ensures perfect matrix alignment.
 results <- lnc_finder(
-  Sequences        = SS_List,     
-  SS.features      = TRUE,        
-  format           = "SS",        
+  Sequences        = filtered_fasta,
+  SS.features      = TRUE,
+  format           = "DNA",
   frequencies.file = "wheat",
   svm.model        = "wheat",
   parallel.cores   = opt$cores
@@ -75,9 +54,7 @@ results <- lnc_finder(
 # SAVE RESULTS
 # ==========================================
 output_dir <- dirname(opt$out)
-if (!dir.exists(output_dir)) {
-  dir.create(output_dir, recursive = TRUE)
-}
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 write.csv(results, opt$out, row.names = TRUE)
 cat(">>> Success! Results cleanly saved to:\n\t", opt$out, "\n")
