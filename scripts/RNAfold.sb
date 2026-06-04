@@ -1,0 +1,37 @@
+#!/bin/bash --login
+#SBATCH --job-name=species_lncFinder
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=128G
+#SBATCH --time=06:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+
+# Paths
+IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
+RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R"
+
+INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
+OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
+STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
+
+# Final output CSV file for lncFinder results
+OUTPUT_CSV="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_results.csv"
+
+mkdir -p $OUTPUT_DIR
+
+echo "=========================================================="
+echo "Filtering candidates for secondary structure algorithm (200-100,000 nt)"
+echo "=========================================================="
+
+ml purge
+ml load SeqKit
+
+# Filter the candidates to only those that are between 200 and 100,000 nt in length (lncRNA length range)
+seqkit seq -m 200 -M 100000 $INPUT_FASTA > "$OUTPUT_DIR/filtered_candidates.fasta"
+
+echo "=========================================================="
+echo "STARTING STEP 1: Native Stream RNA Folding via lncFinder image"
+echo "=========================================================="
+date
+
+singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
+    RNAfold --noPS --jobs=$SLURM_CPUS_PER_TASK < "$OUTPUT_DIR/filtered_candidates.fasta" > "$STRUCT_TXT"
