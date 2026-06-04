@@ -33,6 +33,6 @@ ml purge
 ml load SciPy-bundle/eDMFT-intel-2023a # necessary python dependencies
 
 python3 $SCRIPT_DIR/parse_gffcompare_tracking.py \
-    "$TRACK_FILE" \
-    "$LIST" \
-    "$FINAL_OUT"
+    -t "$TRACK_FILE" \
+    -l "$LIST" \
+    -o "$FINAL_OUT"
