@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-import sys
+import argparse
 import os
+import sys
 import pandas as pd
 
 def main():
-    if len(sys.argv) < 4:
-        print("Usage: python parse_gffcompare_tracking.py <tracking_file> <sra_list_file> <output_csv>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Parse GffCompare tracking files and map to SRA lists.")
+    parser.add_argument("-t", "--tracking", required=True, help="Path to candidate_tracking.tracking file")
+    parser.add_argument("-l", "--list", required=True, help="Path to sra_file_list.txt")
+    parser.add_argument("-o", "--output", required=True, help="Path to output summary CSV")
+    
+    args = parser.parse_args()
 
-    TRACKING_FILE = sys.argv[1]
-    SRA_LIST_FILE = sys.argv[2]
-    OUTPUT_CSV = sys.argv[3]
+    TRACKING_FILE = args.tracking
+    SRA_LIST_FILE = args.list
+    OUTPUT_CSV = args.output
 
     # 1. Read SRA list to map column indices to SRR identifiers
     sra_names = []
@@ -74,13 +78,9 @@ def main():
     if not rows:
         print("\n[WARNING]: No transcripts matched with class code '=' or 'j'.")
         print("This usually means your candidates file is using slightly different structural IDs than the tracking file's reference anchor column.")
-        print("Generating a fallback report using all parsed features instead...")
-        # Emergency fallback: run again without class code constraint to see what's in there
         sys.exit(1)
 
     df = pd.DataFrame(rows)
-    
-    # Aggregate multiple isoforms if a single transcript hits both '=' and 'j' contexts
     df = df.sort_values(by="SRA_Count", ascending=False)
     df.to_csv(OUTPUT_CSV, index=False)
 
