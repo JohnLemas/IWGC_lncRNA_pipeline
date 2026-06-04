@@ -25,7 +25,6 @@ def main():
     with open(SRA_LIST_FILE, "r") as f:
         for line in f:
             if line.strip():
-                # Extract the SRR string from the filename path
                 sra_id = os.path.basename(line.strip()).split("_")[0]
                 sra_names.append(sra_id)
 
@@ -39,30 +38,40 @@ def main():
         print(f"Error: Tracking file not found at {TRACKING_FILE}")
         sys.exit(1)
 
+    # Biological codes:
+    # = (Exact), j (Splicing compatible)
+    # c (Exonic containment - very common for novel lncRNA runs)
+    # m (Intronic/Exonic retention overlap)
+    TARGET_CODES = {"=", "j", "c", "m"}
+
     with open(TRACKING_FILE, "r") as f:
         for line in f:
             parts = line.strip().split("\t")
             if len(parts) < 5:
                 continue
                 
-            # GffCompare tracking columns:
-            # Col 2 = Reference Transcript ID (your candidate MSTRG/STRG id)
-            # Col 4 = Class code (=, j, etc.)
-            candidate_id = parts[2]
+            # Parse components handling potential pipe splits
+            tcons_raw = parts[0].split("|")[0]
+            ref_raw = parts[2]
             class_code = parts[4]
-            
-            # Extract sample columns (everything after column 4)
             sra_columns = parts[5:]
             
-            # We look for strict matches (=) or compatible splicing structures (j)
-            if class_code in ["=", "j"]:
+            # Extract clean candidate identifier
+            if ref_raw != "-" and ref_raw.strip() != "":
+                # If it looks like MSTRG.64|MSTRG.64.4, take the specific transcript ID (the second element)
+                ref_parts = ref_raw.split("|")
+                candidate_id = ref_parts[1] if len(ref_parts) > 1 else ref_parts[0]
+            else:
+                candidate_id = tcons_raw
+            
+            # Check if class code represents true overlap/sharing
+            if class_code in TARGET_CODES:
                 sras_present = []
                 
-                # Zip ensures we don't index past the number of loaded SRA names
                 for idx, cell in enumerate(sra_columns):
                     if idx >= len(sra_names):
                         break
-                    # If the cell contains data (not a dash), this SRA has the sequence
+                    # If cell isn't a dash, the SRA hit exists
                     if cell.strip() != "-":
                         sras_present.append(sra_names[idx])
                 
@@ -74,19 +83,19 @@ def main():
                         "SRA_IDs": ",".join(sorted(sras_present))
                     })
 
-    # 3. Safe guard empty datasets, then export
     if not rows:
-        print("\n[WARNING]: No transcripts matched with class code '=' or 'j'.")
-        print("This usually means your candidates file is using slightly different structural IDs than the tracking file's reference anchor column.")
+        print("\n[ERROR]: No rows extracted. Please double check that target codes match.")
         sys.exit(1)
 
     df = pd.DataFrame(rows)
+    
+    # Sort and write to CSV
     df = df.sort_values(by="SRA_Count", ascending=False)
     df.to_csv(OUTPUT_CSV, index=False)
 
     print(f"\nSuccess! Saved tracking summary to {OUTPUT_CSV}")
     print(f"Total novel candidates matched: {len(df)}")
-    print("\nTop 10 most widely conserved candidates:")
+    print("\nTop 10 most widely conserved candidates across accessions:")
     print(df[["Transcript_ID", "Match_Type", "SRA_Count"]].head(10).to_string(index=False))
 
 if __name__ == "__main__":
