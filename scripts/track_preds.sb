@@ -5,6 +5,8 @@
 #SBATCH --time=00:15:00
 #SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
 
+# ========>------- Create tracking files -------<======== #
+
 SRR_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/SRR_assemblies"
 OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/13_trace"
 REF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
@@ -19,4 +21,18 @@ ml load Miniforge3
 
 conda activate gffcompare
 
-gffcompare -r $REF -i $LIST -o $OUT_DIR/candidate_tracking
+gffcompare -r $REF -i $LIST -o $OUT_DIR/candidate
+
+# ========>------- Parse the output files -------<======== #
+
+SCRIPT_DIR="/home/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts"
+TRACK_FILE="$OUT_DIR/candidate.tracking"
+FINAL_OUT="$OUT_DIR/species_tracking_summary.csv"
+
+ml purge
+ml load SciPy-bundle/eDMFT-intel-2023a # necessary python dependencies
+
+python3 $SCRIPT_DIR/parse_gffcompare_tracking.py \
+    "$TRACK_FILE" \
+    "$LIST" \
+    "$FINAL_OUT"
