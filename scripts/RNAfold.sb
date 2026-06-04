@@ -10,7 +10,8 @@ IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/viennarna.sif"
 
 INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
 OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
-STRUCT_TXT="$OUTPUT_DIR/folded_structures.txt"
+STRUCT_TXT="$OUTPUT_DIR/folded_structures.tmp"
+STRUCT_FIN="$OUTPUT_DIR/folded_structures.txt"
 
 mkdir -p $OUTPUT_DIR
 
@@ -33,3 +34,18 @@ singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
     RNAfold --noPS --jobs=$SLURM_CPUS_PER_TASK < "$OUTPUT_DIR/filtered_candidates.fasta" > "$STRUCT_TXT"
 
 date
+
+echo "=========================================================="
+echo "Cleaning output for lncFinder"
+echo "=========================================================="
+
+# Clean raw output file
+
+grep -v -E "\[WARNING\]|Skipping" "$STRUCT_TXT" > "$STRUCT_FIN"
+
+# Remove temporary file
+rm "$STRUCT_TXT"
+
+echo "=========================================================="
+echo -e "Done. SS file ready for lncFinder:\t$(basename $STRUCT_FIN)"
+echo "=========================================================="
