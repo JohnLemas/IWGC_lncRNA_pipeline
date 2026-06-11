@@ -5,18 +5,18 @@ import sys
 import pandas as pd
 
 def main():
-    parser = argparse.ArgumentParser(description="Map input SRA datasets to high-confidence validated lncRNAs.")
+    parser = argparse.ArgumentParser(description="Generate an SRA tracking matrix for validated lncRNAs.")
     parser.add_argument("-t", "--tracking", required=True, help="Path to candidate.tracking file")
     parser.add_argument("-l", "--list", required=True, help="Path to sra_file_list.txt")
     parser.add_argument("-f", "--fasta", required=True, help="Path to final high-confidence filtered fasta file")
-    parser.add_argument("-o", "--output", required=True, help="Path to output dataset contributions summary CSV")
+    parser.add_argument("-o", "--output", required=True, help="Path to output summary TSV")
     
     args = parser.parse_args()
 
     TRACKING_FILE = args.tracking
     SRA_LIST_FILE = args.list
     FASTA_FILE = args.fasta
-    OUTPUT_CSV = args.output
+    OUTPUT_TSV = args.output
 
     # 1. Parse your final high-confidence transcript IDs from your filtered FASTA file
     validated_ids = set()
@@ -49,15 +49,14 @@ def main():
 
     print(f"Loaded {len(sra_names)} SRA identifiers from your dataset list.")
 
-    # 3. Initialize contribution counter matrix
-    sra_counts = {sra: 0 for sra in sra_names}
-    matched_transcripts = 0
+    # 3. Scan the tracking matrix file line by line
+    rows = []
+    print("Extracting per-transcript tracking info for validated sequences...")
 
     if not os.path.exists(TRACKING_FILE):
         print(f"Error: Tracking file not found at {TRACKING_FILE}")
         sys.exit(1)
 
-    print("Scanning tracking matrix specifically against your high-confidence list...")
     with open(TRACKING_FILE, "r") as f:
         for line in f:
             parts = line.strip().split("\t")
@@ -76,30 +75,39 @@ def main():
             else:
                 candidate_id = tcons_raw
                 
-            # If this transcript row matches one of your 2,570 high-confidence IDs, tally its sources
+            # If this specific transcript belongs to your final 2,570 list, map its accessions
             if candidate_id in validated_ids:
-                matched_transcripts += 1
+                sras_present = []
                 for idx, cell in enumerate(sra_columns):
                     if idx >= len(sra_names):
                         break
-                    # If the matrix cell contains content other than a dash, this dataset contained it
+                    # If the matrix cell contains data (not a dash), this dataset has the transcript
                     if cell.strip() != "-":
-                        sra_counts[sra_names[idx]] += 1
+                        sras_present.append(sra_names[idx])
+                
+                if sras_present:
+                    rows.append({
+                        "Predicted_Gene_ID": candidate_id,
+                        "SRA_Count": len(sras_present),
+                        "SRA_IDs": ",".join(sorted(sras_present))
+                    })
 
-    # 4. Compile, sort, and save into your final summary table
-    df_summary = pd.DataFrame([
-        {"SRA_Accession": sra, "Validated_lncRNA_Count": count}
-        for sra, count in sra_counts.items()
-    ])
+    if not rows:
+        print("\n[ERROR]: No rows extracted. Verify that your FASTA IDs exactly match the tracking file IDs.")
+        sys.exit(1)
 
-    df_summary = df_summary.sort_values(by="Validated_lncRNA_Count", ascending=False)
-    df_summary.to_csv(OUTPUT_CSV, index=False)
+    # 4. Compile, sort, and save into a tab-separated (TSV) report
+    df = pd.DataFrame(rows)
+    df = df.sort_values(by="SRA_Count", ascending=False)
+    
+    # Force output to be tab-separated as requested
+    df.to_csv(OUTPUT_CSV, sep="\t", index=False)
 
     print(f"\nSuccess! Successfully processed your sequence mapping matrix.")
-    print(f"Identified {matched_transcripts} matching structure rows inside the tracking table.")
-    print(f"Saved dataset contribution matrix directly to: {OUTPUT_CSV}\n")
-    print("Top 10 SRA datasets that contributed the most sequences to your final pool:")
-    print(df_summary.head(10).to_string(index=False))
+    print(f"Saved transcript-level tracking report (TSV) to: {OUTPUT_CSV}")
+    print(f"Total novel candidates written to file: {len(df)}")
+    print("\nTop 10 most widely conserved candidates:")
+    print(df[["Predicted_Gene_ID", "SRA_Count"]].head(10).to_string(index=False))
 
 if __name__ == "__main__":
     main()
