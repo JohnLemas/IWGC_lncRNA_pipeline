@@ -100,11 +100,11 @@ def main():
     df = pd.DataFrame(rows)
     df = df.sort_values(by="SRA_Count", ascending=False)
     
-    # Force output to be tab-separated as requested
-    df.to_csv(OUTPUT_CSV, sep="\t", index=False)
+    # Fix: Corrected OUTPUT_CSV to OUTPUT_TSV to match the top definition
+    df.to_csv(OUTPUT_TSV, sep="\t", index=False)
 
     print(f"\nSuccess! Successfully processed your sequence mapping matrix.")
-    print(f"Saved transcript-level tracking report (TSV) to: {OUTPUT_CSV}")
+    print(f"Saved transcript-level tracking report (TSV) to: {OUTPUT_TSV}")
     print(f"Total novel candidates written to file: {len(df)}")
     print("\nTop 10 most widely conserved candidates:")
     print(df[["Predicted_Gene_ID", "SRA_Count"]].head(10).to_string(index=False))

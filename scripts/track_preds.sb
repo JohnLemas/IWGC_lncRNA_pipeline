@@ -27,7 +27,7 @@ gffcompare -r $REF -i $LIST -o $OUT_DIR/candidate
 
 SCRIPT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts"
 TRACK_FILE="$OUT_DIR/candidate.tracking"
-FINAL_OUT="$OUT_DIR/species_tracking_summary.csv"
+FINAL_OUT="$OUT_DIR/species_tracking_summary.tsv"
 
 # Automatically find whichever species lncRNA.fasta file is currently being calculated
 # (Matches files inside your parallel 10_intersect directories)
