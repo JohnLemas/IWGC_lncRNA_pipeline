@@ -18,7 +18,7 @@ EDTA requires a genome assembly and a CDS file. General steps for running EDTA i
 5. Real structural/functional gene annotation (BRAKER/MAKER) on the masked genome
 6. (Optional) refine TE annotation again using the now-final CDS, if you want a cleaner pass
 
-We'll have to decide how we want to swap out the standing Repeatmodeler/Repeatmasker calls in the IWGC pipeline.
+We'll have to decide how we want to swap out the standing Repeatmodeler/Repeatmasker calls in the IWGC pipeline. Since we are already pulling protein sequences from related species for gene prediction we can also pull their CDS files for use in EDTA. THEY SHOULD NOT BE BACK TRANSLATED CDS FILES FROM THE PROTEIN FILES they need to be directly pulled along with the proten files. EDTA is built to use potential coding sequences to sift out any false positives. Since coding space is under selective pressure, using a CDS file from a closely related species will work fine for this step. Using `datasets` to pull protein and CDS files will make this simple.
 
 ---
 ## General EDTA run notes
