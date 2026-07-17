@@ -50,3 +50,36 @@ taskset -c 42-102 singularity exec -B "$INDIR" -B "$OUTDIR" "$SIF" \
 
 ## Taskset:
 Cool tool to subset specific cores to keep the run organized. I started using taskset because version 2 was blowing up cores past the --threads count. The -c flag corresponds to the core number that comes up in htop- note that htop core count starts at 1 and taskset starts at 0.
+
+## LTR Assembly Index score calculation
+LAI is an accepted metric for assembly completeness based on the presence of complete LTR retrotransposons in the assembly. 
+
+- >18: gold standard
+- 10-18: reference
+- <10: draft
+
+`LAI` is built into `LTR_retriever` which is also built into `EDTA`, but has reduced manipulation via `EDTA` directly (ex. no `-mono` option via `EDTA`). In the case of IWGC reference genomes I think it makes more sense to run `LAI` after `EDTA` to obtain assembly completness metrics. Many of the weed assemblies are polyploid, and running `LAI` on the entire polyploid genome will skew results. We need to integrate `LAI` as a stand-alone image to integrate into the snakefile, and design the rule to be sensitive to the presence of subgenomes so that each individual subgenome is run seperately. I have a functional image that we can drop in after `EDTA` runs, and I have a bash script that will detect multiple subgenomes and run them each seperately. 
+
+```bash
+# ==============================================================
+# Run LAI
+# -genome     : the genome FASTA (same one EDTA/LTR_retriever ran on)
+# -intact     : (optional) can point to LTR.intact.gff3 for finer intact-element info -- omit if not available
+# -intact     : LTR_retriever's *.pass.list file (NOT the nmtf.pass.list)
+# -all        : genome-wide RepeatMasker *.out file used to mask the whole genome with the final TE library
+# -mono       : list of monoploid (subgenome) sequence IDs -- IMPORTANT for polyploid genomes like allohexaploid E. colona.
+#               This should be a plain text file, one sequence/chromosome ID per line,
+#               listing only ONE representative subgenome set (roughly 1/3 of your 28 sequences for a hexaploid),
+#               so LAI isn't distorted by homoeologous redundancy across subgenomes.
+#               Omit -mono if you want the whole-genome (all subgenomes) LAI instead.
+# -t          : threads
+# -q          : quick LTR identity estimation (faster, ~0.5% less accurate) -- remove this flag for full accuracy on a genome this size if time allows
+# ==============================================================
+
+LAI -genome "${GENOME}" \
+    -intact "${PASS_LIST}" \
+    -all "${RM_OUT}" \
+    -t ${THREADS} \
+    -q \
+    > "${OUT_LOG}" 2>&1
+```
