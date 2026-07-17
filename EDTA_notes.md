@@ -54,9 +54,9 @@ Cool tool to subset specific cores to keep the run organized. I started using ta
 ## LTR Assembly Index score calculation
 LAI is an accepted metric for assembly completeness based on the presence of complete LTR retrotransposons in the assembly. 
 
-- >18: gold standard
-- 10-18: reference
-- <10: draft
+- Greater than 18 represents gold standard
+- Between 10 and 18 is reference level
+- less than 10 would be a draft assembly
 
 `LAI` is built into `LTR_retriever` which is also built into `EDTA`, but has reduced manipulation via `EDTA` directly (ex. no `-mono` option via `EDTA`). In the case of IWGC reference genomes I think it makes more sense to run `LAI` after `EDTA` to obtain assembly completness metrics. Many of the weed assemblies are polyploid, and running `LAI` on the entire polyploid genome will skew results. We need to integrate `LAI` as a stand-alone image to integrate into the snakefile, and design the rule to be sensitive to the presence of subgenomes so that each individual subgenome is run seperately. I have a functional image that we can drop in after `EDTA` runs, and I have a bash script that will detect multiple subgenomes and run them each seperately. 
 
