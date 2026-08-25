@@ -22,7 +22,7 @@ option_list <- list(
               help = "Filename for converted full TE BED [default: %default]", metavar = "filename"),
   make_option(c("--out_lnc_bed"), type = "character", default = "lncRNA_full.bed",
               help = "Filename for converted full lncRNA BED [default: %default]", metavar = "filename"),
-  make_option(c("-s", "--strand_specific"), action = "true", default = FALSE,
+  make_option(c("-s", "--strand_specific"), action = "store_true", default = FALSE,
               help = "Enforce strand-specific overlap (default is strand-ignorant) [default: %default]")
 )
 
