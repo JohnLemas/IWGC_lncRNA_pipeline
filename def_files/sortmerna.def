@@ -1,0 +1,72 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+# Build with, e.g.:
+#   singularity build sortmerna.sif sortmerna.def
+# Override the version at build time with:
+#   singularity build --build-arg SORTMERNA_VERSION=7.0.0 sortmerna.sif sortmerna.def
+
+%arguments
+    SORTMERNA_VERSION=7.0.0
+
+%labels
+    Author your-name
+    Software sortmerna
+    Version {{ SORTMERNA_VERSION }}
+    Source https://github.com/sortmerna/sortmerna/releases
+
+%post
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        wget \
+        ca-certificates
+    rm -rf /var/lib/apt/lists/*
+
+    SORTMERNA_VERSION="{{ SORTMERNA_VERSION }}"
+    INSTALL_DIR=/opt/sortmerna
+
+    mkdir -p "${INSTALL_DIR}"
+    cd /tmp
+
+    # Official self-extracting binary installer (bundles its own shared libs,
+    # no compiler/conda needed). Requires glibc >= 2.38, hence Ubuntu 24.04 base.
+    wget -q "https://github.com/sortmerna/sortmerna/releases/download/v${SORTMERNA_VERSION}/sortmerna-${SORTMERNA_VERSION}-Linux.sh" \
+        -O sortmerna-installer.sh
+
+    bash sortmerna-installer.sh --skip-license --prefix="${INSTALL_DIR}" --exclude-subdir
+
+    chmod -R a+rX "${INSTALL_DIR}"
+    rm -f /tmp/sortmerna-installer.sh
+
+%environment
+    export SORTMERNA_HOME=/opt/sortmerna
+    export PATH="/opt/sortmerna/bin:${PATH}"
+
+%runscript
+    exec sortmerna "$@"
+
+%test
+    . /.singularity.d/env/90-environment.sh 2>/dev/null || true
+    export PATH="/opt/sortmerna/bin:${PATH}"
+    sortmerna --version
+
+%help
+    Container image for SortMeRNA, built from the official precompiled
+    binary release (https://github.com/sortmerna/sortmerna/releases),
+    not from conda.
+
+    Usage:
+        singularity run sortmerna.sif --version
+        singularity run sortmerna.sif --ref db.fasta --reads reads.fastq --workdir /path/to/workdir
+
+    Or drop into a shell with the binaries on PATH:
+        singularity exec sortmerna.sif sortmerna --help
+
+    Reference databases are NOT bundled in this image (they are large and
+    version-specific). Download them separately, e.g.:
+        wget https://github.com/sortmerna/sortmerna/releases/download/v7.0.0/smr_v4.3_default_db.fasta.gz
+    and bind-mount the directory containing them at runtime with
+    `singularity run -B /path/to/db_dir:/dbs sortmerna.sif ...`.
