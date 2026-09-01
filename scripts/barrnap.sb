@@ -15,9 +15,9 @@ set -euo pipefail
 # Path to the SortMeRNA + barrnap Singularity image
 SIF=/path/to/sortmerna.sif
 
-# Directory containing one FASTA file per genome/contig set to annotate.
-# Expected extension: .fasta (change the glob below if yours differ, e.g. .fa/.fna)
-GENOME_DIR=/path/to/genomes
+# Genome assembly FASTA to annotate (haplotype-resolved chromosomes + Chr00
+# together in one file works fine - barrnap doesn't need contigs pre-sorted).
+GENOME=/path/to/genome.fasta
 
 # Kingdoms to run barrnap with. For plant genomes this covers nuclear (euk),
 # chloroplast (bac, since chloroplasts are bacterial-derived), and
@@ -41,32 +41,31 @@ COMBINED_FASTA="${OUTDIR}/combined_rrna.fasta"
 CUSTOM_DB="${OUTDIR}/custom_db.fasta"
 
 # ----------------------------------------------------------------------------
-# STEP 1: Run barrnap on every genome, for every kingdom, via the image
+# STEP 1: Run barrnap on the genome, once per kingdom, via the image
 # ----------------------------------------------------------------------------
 
-echo "[$(date)] Running barrnap for kingdoms: ${KINGDOMS[*]} on genomes in ${GENOME_DIR}"
+name=$(basename "${GENOME}" .fasta)
+GENOME_DIR=$(dirname "${GENOME}")
 
-for genome in "${GENOME_DIR}"/*.fasta; do
-    name=$(basename "${genome}" .fasta)
+echo "[$(date)] Running barrnap for kingdoms: ${KINGDOMS[*]} on ${GENOME}"
 
-    for kingdom in "${KINGDOMS[@]}"; do
-        echo "  -> ${name} [${kingdom}]"
+for kingdom in "${KINGDOMS[@]}"; do
+    echo "  -> ${name} [${kingdom}]"
 
-        singularity exec -B "${GENOME_DIR}:${GENOME_DIR}" -B "${OUTDIR}:${OUTDIR}" "${SIF}" \
-            barrnap \
-                --kingdom "${kingdom}" \
-                --threads "${THREADS}" \
-                --outseq "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.fasta" \
-                "${genome}" \
-            > "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.gff"
-    done
+    singularity exec -B "${GENOME_DIR}:${GENOME_DIR}" -B "${OUTDIR}:${OUTDIR}" "${SIF}" \
+        barrnap \
+            --kingdom "${kingdom}" \
+            --threads "${THREADS}" \
+            --outseq "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.fasta" \
+            "${GENOME}" \
+        > "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.gff"
 done
 
 # ----------------------------------------------------------------------------
-# STEP 2: Concatenate all per-genome rRNA FASTA outputs
+# STEP 2: Concatenate all per-kingdom rRNA FASTA outputs
 # ----------------------------------------------------------------------------
 
-echo "[$(date)] Concatenating per-genome rRNA FASTA files"
+echo "[$(date)] Concatenating per-kingdom rRNA FASTA files"
 cat "${OUTDIR}"/per_genome/*_rrna.fasta > "${COMBINED_FASTA}"
 
 n_seqs=$(grep -c '^>' "${COMBINED_FASTA}" || true)
