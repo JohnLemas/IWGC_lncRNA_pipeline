@@ -10,9 +10,9 @@ From: ubuntu:24.04
     SORTMERNA_VERSION=7.0.0
 
 %labels
-    Author your-name
-    Software sortmerna
-    Version {{ SORTMERNA_VERSION }}
+    Author John Lemas, Claude
+    Software sortmerna+barrnap
+    SortMeRNA_Version {{ SORTMERNA_VERSION }}
     Source https://github.com/sortmerna/sortmerna/releases
 
 %post
@@ -22,7 +22,8 @@ From: ubuntu:24.04
     apt-get update
     apt-get install -y --no-install-recommends \
         wget \
-        ca-certificates
+        ca-certificates \
+        barrnap
     rm -rf /var/lib/apt/lists/*
 
     SORTMERNA_VERSION="{{ SORTMERNA_VERSION }}"
@@ -52,21 +53,26 @@ From: ubuntu:24.04
     . /.singularity.d/env/90-environment.sh 2>/dev/null || true
     export PATH="/opt/sortmerna/bin:${PATH}"
     sortmerna --version
+    barrnap --version
 
 %help
-    Container image for SortMeRNA, built from the official precompiled
-    binary release (https://github.com/sortmerna/sortmerna/releases),
-    not from conda.
+    One-stop ribosomal filtering container: SortMeRNA (official precompiled
+    binary release) + barrnap, for building custom rRNA reference databases
+    from new species and then filtering reads against them.
 
-    Usage:
-        singularity run sortmerna.sif --version
-        singularity run sortmerna.sif --ref db.fasta --reads reads.fastq --workdir /path/to/workdir
+    SortMeRNA usage:
+        singularity exec sortmerna.sif sortmerna --ref db.fasta --reads reads.fastq --workdir /path/to/workdir
 
-    Or drop into a shell with the binaries on PATH:
-        singularity exec sortmerna.sif sortmerna --help
+    barrnap usage (predict rRNA genes from a genome, extract to FASTA):
+        singularity exec sortmerna.sif barrnap --kingdom bac --outseq rrna.fasta genome.fasta > rrna.gff
+        --kingdom options: bac, arc, euk, mito
 
-    Reference databases are NOT bundled in this image (they are large and
-    version-specific). Download them separately, e.g.:
-        wget https://github.com/sortmerna/sortmerna/releases/download/v7.0.0/smr_v4.3_default_db.fasta.gz
-    and bind-mount the directory containing them at runtime with
-    `singularity run -B /path/to/db_dir:/dbs sortmerna.sif ...`.
+    Typical custom-DB workflow:
+        1. barrnap --kingdom <bac|arc|euk> --outseq species_rrna.fasta genome.fasta > species_rrna.gff
+        2. cat species1_rrna.fasta species2_rrna.fasta ... > custom_db.fasta
+        3. (optional) dereplicate/cluster custom_db.fasta with vsearch or cd-hit-est
+        4. sortmerna --ref existing_db.fasta --ref custom_db.fasta --reads reads.fastq --workdir /path/to/workdir
+
+    No reference databases are bundled in this image — bind-mount your
+    databases and genomes at runtime, e.g.:
+        singularity exec -B /path/to/data:/data sortmerna.sif barrnap ...
