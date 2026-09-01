@@ -1,0 +1,105 @@
+#!/bin/bash
+#SBATCH --job-name=barrnap_custom_db
+#SBATCH --output=%x_%j.out
+#SBATCH --error=%x_%j.err
+#SBATCH --partition=CHANGE_ME          # e.g. standard, batch, general
+#SBATCH --account=CHANGE_ME            # if your cluster requires it
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --time=04:00:00
+
+set -euo pipefail
+
+# ----------------------------------------------------------------------------
+# USER-CONFIGURABLE SETTINGS
+# ----------------------------------------------------------------------------
+
+# Path to the SortMeRNA + barrnap Singularity image
+SIF=/path/to/sortmerna.sif
+
+# Directory containing one FASTA file per genome/contig set to annotate.
+# Expected extension: .fasta (change the glob below if yours differ, e.g. .fa/.fna)
+GENOME_DIR=/path/to/genomes
+
+# Kingdoms to run barrnap with. For plant genomes this covers nuclear (euk),
+# chloroplast (bac, since chloroplasts are bacterial-derived), and
+# mitochondrial (mito, review hits manually - plant mitogenomes are more
+# divergent than the model's training data). Add "arc" to the list if needed.
+KINGDOMS=(bac euk mito)
+
+# Where to write barrnap outputs and the final clustered database
+OUTDIR=/path/to/output/rrna_db_build
+mkdir -p "${OUTDIR}/per_genome"
+
+# Number of threads for barrnap and cd-hit-est (matches --cpus-per-task above)
+THREADS=${SLURM_CPUS_PER_TASK:-8}
+
+# cd-hit-est clustering identity threshold (0.97 = cluster at 97% identity,
+# similar to how SortMeRNA's own default databases are clustered)
+CDHIT_IDENTITY=0.97
+
+# Final combined/clustered outputs
+COMBINED_FASTA="${OUTDIR}/combined_rrna.fasta"
+CUSTOM_DB="${OUTDIR}/custom_db.fasta"
+
+# ----------------------------------------------------------------------------
+# STEP 1: Run barrnap on every genome, for every kingdom, via the image
+# ----------------------------------------------------------------------------
+
+echo "[$(date)] Running barrnap for kingdoms: ${KINGDOMS[*]} on genomes in ${GENOME_DIR}"
+
+for genome in "${GENOME_DIR}"/*.fasta; do
+    name=$(basename "${genome}" .fasta)
+
+    for kingdom in "${KINGDOMS[@]}"; do
+        echo "  -> ${name} [${kingdom}]"
+
+        singularity exec -B "${GENOME_DIR}:${GENOME_DIR}" -B "${OUTDIR}:${OUTDIR}" "${SIF}" \
+            barrnap \
+                --kingdom "${kingdom}" \
+                --threads "${THREADS}" \
+                --outseq "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.fasta" \
+                "${genome}" \
+            > "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.gff"
+    done
+done
+
+# ----------------------------------------------------------------------------
+# STEP 2: Concatenate all per-genome rRNA FASTA outputs
+# ----------------------------------------------------------------------------
+
+echo "[$(date)] Concatenating per-genome rRNA FASTA files"
+cat "${OUTDIR}"/per_genome/*_rrna.fasta > "${COMBINED_FASTA}"
+
+n_seqs=$(grep -c '^>' "${COMBINED_FASTA}" || true)
+echo "  Combined FASTA contains ${n_seqs} sequences"
+
+if [ "${n_seqs}" -eq 0 ]; then
+    echo "ERROR: no rRNA sequences were predicted. Check barrnap logs before proceeding." >&2
+    exit 1
+fi
+
+# ----------------------------------------------------------------------------
+# STEP 3: Dereplicate/cluster with cd-hit-est (cluster module, not the image)
+# ----------------------------------------------------------------------------
+
+echo "[$(date)] Loading cd-hit module"
+module load cd-hit   # adjust to your cluster's actual module name/version,
+                      # e.g. `module load cd-hit/4.8.1` or `module load CD-HIT`
+
+echo "[$(date)] Clustering combined FASTA at ${CDHIT_IDENTITY} identity"
+cd-hit-est \
+    -i "${COMBINED_FASTA}" \
+    -o "${CUSTOM_DB}" \
+    -c "${CDHIT_IDENTITY}" \
+    -n 10 \
+    -M $((16 * 1024)) \
+    -T "${THREADS}" \
+    -d 0
+
+module unload cd-hit
+
+echo "[$(date)] Done. Custom SortMeRNA reference database written to:"
+echo "  ${CUSTOM_DB}"
+echo "Use it alongside your existing databases, e.g.:"
+echo "  singularity exec ${SIF} sortmerna --ref existing_db.fasta --ref ${CUSTOM_DB} --reads reads.fastq --workdir /path/to/workdir"
