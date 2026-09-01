@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+
 library(optparse)
 library(seqinr)
 library(LncFinder)
@@ -8,11 +9,13 @@ library(LncFinder)
 # ==========================================
 option_list <- list(
   make_option(c("-i", "--fasta"), type = "character", default = NULL,
-              help = "Path to the full candidate FASTA file", metavar = "character"),
+              help = "Path to the raw input candidate FASTA file", metavar = "character"),
   make_option(c("-o", "--out"), type = "character", default = NULL,
               help = "Path where the output results CSV should be saved", metavar = "character"),
   make_option(c("-p", "--cores"), type = "integer", default = 1,
-              help = "Number of parallel CPU cores to use [default %default]", metavar = "integer")
+              help = "Number of parallel CPU cores to use [default %default]", metavar = "integer"),
+  make_option(c("-m", "--model"), type = "character", default = "wheat",
+              help = "Model type: 'wheat' (monocot), 'dicot', 'human', 'mouse', or 'other' [default %default]", metavar = "character")
 )
 
 opt <- parse_args(OptionParser(option_list = option_list))
@@ -21,40 +24,99 @@ if (is.null(opt$fasta) || is.null(opt$out)) {
   stop("CRITICAL ERROR: Both flags -i/--fasta and -o/--out must be provided.\n", call. = FALSE)
 }
 
+# Map model flags to LncFinder internal parameters
+model_type <- tolower(opt$model)
+
+if (model_type == "wheat") {
+  freq_file <- "wheat"
+  svm_mod   <- "wheat"
+} else if (model_type == "dicot") {
+  freq_file <- "A.thaliana"
+  svm_mod   <- "A.thaliana"
+} else if (model_type == "human") {
+  freq_file <- "human"
+  svm_mod   <- "human"
+} else if (model_type == "mouse") {
+  freq_file <- "mouse"
+  svm_mod   <- "mouse"
+} else if (model_type == "other") {
+  freq_file <- "A.thaliana"
+  svm_mod   <- "human"
+} else {
+  stop(sprintf("CRITICAL ERROR: Invalid model '%s'. Choose from: wheat, dicot, human, mouse, other.\n", opt$model), call. = FALSE)
+}
+
+# Ensure output directory exists
+output_dir <- dirname(opt$out)
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+# Set file paths for intermediate outputs
+filtered_fasta_path <- file.path(output_dir, "filtered_candidates.fasta")
+folded_output_path  <- file.path(output_dir, "folded_structures.csv")
+
 # ==========================================
 # STEP 1: LOAD & FILTER FASTA IN R
 # ==========================================
-cat(">>> [Step 1] Loading and filtering FASTA dataset natively in memory...\n")
+cat(">>> [Step 1] Loading and filtering FASTA dataset in memory...\n")
 raw_fasta <- read.fasta(opt$fasta, seqtype = "DNA", as.string = TRUE)
 
-# Filter out sequences longer than 50,000 nt to prevent O(n^3) computational explosion
+# Filter sequences between 200 and 5,000 nt
 seq_lengths <- sapply(raw_fasta, nchar)
-filtered_fasta <- raw_fasta[seq_lengths >= 200 & seq_lengths <= 50000]
+filtered_fasta <- raw_fasta[seq_lengths >= 200 & seq_lengths <= 5000]
 
-cat(sprintf(">>> Filtered out %d outlier sequences. Processing %d valid candidates.\n",
+cat(sprintf(">>> Filtered out %d outlier sequences. Processing %d valid candidates.\n", 
             length(raw_fasta) - length(filtered_fasta), length(filtered_fasta)))
 
-# ==========================================
-# STEP 2 & 3: INTERNAL FOLDING & PREDICTION
-# ==========================================
-cat(">>> [Step 2] Computing secondary structures and running SVM model natively...\n")
+# Save filtered sequences explicitly in output dir
+write.fasta(
+  sequences = filtered_fasta, 
+  names     = names(filtered_fasta), 
+  file.out  = filtered_fasta_path
+)
+cat(sprintf(">>> Saved filtered FASTA to:\n\t %s\n", filtered_fasta_path))
 
-# By passing format = "DNA" and SS.features = TRUE, LncFinder calls its internal
-# RNAfold algorithm directly. This ensures perfect matrix alignment.
+# ==========================================
+# STEP 2: SECONDARY STRUCTURE GENERATION / RESUME
+# ==========================================
+if (file.exists(folded_output_path)) {
+  cat(sprintf(">>> [Step 2] Found existing folded structures at:\n\t %s\n>>> Skipping RNAfold calculation and loading pre-computed matrix...\n", folded_output_path))
+  
+  SS_List <- read.csv(folded_output_path, stringsAsFactors = FALSE)
+  
+} else {
+  cat(">>> [Step 2] Calling run_RNAfold() natively on filtered sequences...\n")
+
+  SS_Raw <- run_RNAfold(
+    Sequences      = filtered_fasta,
+    RNAfold.path   = "RNAfold",
+    parallel.cores = opt$cores
+  )
+
+  SS_List <- as.data.frame(SS_Raw, stringsAsFactors = FALSE)
+  
+  # Save immediately to disk so folding never has to run twice
+  write.csv(SS_List, folded_output_path, row.names = FALSE)
+  cat(sprintf(">>> Saved secondary structures to:\n\t %s\n", folded_output_path))
+}
+
+cat(sprintf(">>> Structured matrix ready with %d sequences.\n", nrow(SS_List)))
+
+# ==========================================
+# STEP 3: RUN LNCFINDER SVM PREDICTION
+# ==========================================
+cat(sprintf(">>> [Step 3] Running LncFinder SVM prediction using profile: '%s'...\n", model_type))
+
 results <- lnc_finder(
-  Sequences        = filtered_fasta,
-  SS.features      = TRUE,
-  format           = "DNA",
-  frequencies.file = "wheat",
-  svm.model        = "wheat",
+  Sequences        = SS_List,     
+  SS.features      = TRUE,        
+  format           = "SS",        
+  frequencies.file = freq_file,
+  svm.model        = svm_mod,
   parallel.cores   = opt$cores
 )
 
 # ==========================================
 # SAVE RESULTS
 # ==========================================
-output_dir <- dirname(opt$out)
-if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-
 write.csv(results, opt$out, row.names = TRUE)
-cat(">>> Success! Results cleanly saved to:\n\t", opt$out, "\n")
+cat(">>> Success! Final predictions cleanly saved to:\n\t", opt$out, "\n")
