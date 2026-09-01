@@ -24,7 +24,7 @@ if (is.null(opt$fasta) || is.null(opt$out)) {
   stop("CRITICAL ERROR: Both flags -i/--fasta and -o/--out must be provided.\n", call. = FALSE)
 }
 
-# Map model flags to LncFinder internal parameters
+# Map user-friendly model flags to LncFinder internal parameters
 model_type <- tolower(opt$model)
 
 if (model_type == "wheat") {
@@ -50,61 +50,43 @@ if (model_type == "wheat") {
 output_dir <- dirname(opt$out)
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
-# Set file paths for intermediate outputs
-filtered_fasta_path <- file.path(output_dir, "filtered_candidates.fasta")
-folded_output_path  <- file.path(output_dir, "folded_structures.csv")
-
 # ==========================================
 # STEP 1: LOAD & FILTER FASTA IN R
 # ==========================================
 cat(">>> [Step 1] Loading and filtering FASTA dataset in memory...\n")
 raw_fasta <- read.fasta(opt$fasta, seqtype = "DNA", as.string = TRUE)
 
-# Filter sequences between 200 and 5,000 nt
 seq_lengths <- sapply(raw_fasta, nchar)
 filtered_fasta <- raw_fasta[seq_lengths >= 200 & seq_lengths <= 5000]
 
 cat(sprintf(">>> Filtered out %d outlier sequences. Processing %d valid candidates.\n", 
             length(raw_fasta) - length(filtered_fasta), length(filtered_fasta)))
 
-# Save filtered sequences explicitly in output dir
+filtered_fasta_path <- file.path(output_dir, "filtered_candidates.fasta")
 write.fasta(
   sequences = filtered_fasta, 
   names     = names(filtered_fasta), 
   file.out  = filtered_fasta_path
 )
-cat(sprintf(">>> Saved filtered FASTA to:\n\t %s\n", filtered_fasta_path))
 
 # ==========================================
-# STEP 2: SECONDARY STRUCTURE GENERATION / RESUME
+# STEP 2: RUN NATIVE RNAFOLD VIA LNCFINDER
 # ==========================================
-if (file.exists(folded_output_path)) {
-  cat(sprintf(">>> [Step 2] Found existing folded structures at:\n\t %s\n>>> Skipping RNAfold calculation and loading pre-computed matrix...\n", folded_output_path))
-  
-  SS_List <- read.csv(folded_output_path, stringsAsFactors = FALSE)
-  
-} else {
-  cat(">>> [Step 2] Calling run_RNAfold() natively on filtered sequences...\n")
+cat(">>> [Step 2] Calling run_RNAfold() natively on filtered sequences...\n")
 
-  SS_Raw <- run_RNAfold(
-    Sequences      = filtered_fasta,
-    RNAfold.path   = "RNAfold",
-    parallel.cores = opt$cores
-  )
+SS_Raw <- run_RNAfold(
+  Sequences      = filtered_fasta,
+  RNAfold.path   = "RNAfold",
+  parallel.cores = opt$cores
+)
 
-  SS_List <- as.data.frame(SS_Raw, stringsAsFactors = FALSE)
-  
-  # Save immediately to disk so folding never has to run twice
-  write.csv(SS_List, folded_output_path, row.names = FALSE)
-  cat(sprintf(">>> Saved secondary structures to:\n\t %s\n", folded_output_path))
-}
-
-cat(sprintf(">>> Structured matrix ready with %d sequences.\n", nrow(SS_List)))
+SS_List <- as.data.frame(SS_Raw, stringsAsFactors = FALSE)
+cat(sprintf(">>> Successfully generated structured matrix with %d sequences.\n", nrow(SS_List)))
 
 # ==========================================
 # STEP 3: RUN LNCFINDER SVM PREDICTION
 # ==========================================
-cat(sprintf(">>> [Step 3] Running LncFinder SVM prediction using profile: '%s'...\n", model_type))
+cat(sprintf(">>> [Step 3] Running LncFinder SVM model using selected model profile: '%s'...\n", model_type))
 
 results <- lnc_finder(
   Sequences        = SS_List,     
@@ -118,5 +100,12 @@ results <- lnc_finder(
 # ==========================================
 # SAVE RESULTS
 # ==========================================
-write.csv(results, opt$out, row.names = TRUE)
-cat(">>> Success! Final predictions cleanly saved to:\n\t", opt$out, "\n")
+# Convert row names (sequence IDs) into an explicit column
+results$Sequence_ID <- rownames(results)
+
+# Reorder columns so Sequence_ID is first
+results <- results[, c("Sequence_ID", setdiff(colnames(results), "Sequence_ID"))]
+
+# Save without R's automatic row index column
+write.csv(results, opt$out, row.names = FALSE)
+cat(">>> Success! Results cleanly saved to:\n\t", opt$out, "\n")
