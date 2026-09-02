@@ -1,9 +1,9 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_finalize
+#SBATCH --job-name=EchCo_finalize
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --time=00:30:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+#SBATCH --output=/mnt/scratch/lemasjoh/Ech_co_rRNA_dep_RNAseq/logs/%x_%j.out
 
 # Fix the locale warnings and suppress the systemd/timedatectl warning from R packages
 export LC_ALL=C
@@ -11,31 +11,31 @@ export LANG=C
 export TZ="UTC"
 date
 
+BASE="/mnt/scratch/lemasjoh/Ech_co_rRNA_dep_RNAseq"
+
 # R parsing image for output files
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
+IMAGE="${BASE}/images/rbio_tools_dev.sif"
+
+# Single shared output directory for all intersect/classify steps
+INT_CLASS_OUT="${BASE}/03_outputs/11_int_class"
+mkdir -p $INT_CLASS_OUT
 
 # =======>------- Intersect IDs -------<======== #
 
 # Input files. script can run with at least two of the tools, and works with gtf and txt files.
-FEELnc="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
-CPAT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/06_cpat/species_cpat.output"
-lncBoost="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/07_lncBoost/species_predictions.txt"
-lncFinder="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_wheat_model_results.csv"
-DIAMOND="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/09_diamond/species_diamond_out.txt"
+FEELnc="${BASE}/03_outputs/06_FEELnc/EchCo_FEELnc.gtf"
+CPAT="${BASE}/03_outputs/07_cpat/EchCo_cpat.output"
+lncBoost="${BASE}/03_outputs/08_lncBoost/EchCo_predictions.txt"
+lncFinder="${BASE}/03_outputs/09_lncFinder/EchCo_lncFinder_results.csv"
+DIAMOND="${BASE}/03_outputs/10_diamond/EchCo_diamond_out.txt"
 
 echo -e ">>>Intersect:\nInput files:\n${FEELnc}\n${CPAT}\n${lncFinder}\n${lncBoost}\n${DIAMOND}\n...\n"
 
 # Intersect output files
-INT_OUT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_intersect" # this is the output directory for the intersect results
-INT_PFX="${INT_OUT}/species" # set the filename prefix for the output files
-INT_SCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/intersect_ids.R"
-
-echo -e ">>>Intersect:\nMaking intersect output directory:\n${INT_OUT}\n...\n"
-
-mkdir -p $INT_OUT
+INT_PFX="${INT_CLASS_OUT}/EchCo" # set the filename prefix for the output files
 
 # Pass the flags directly to the image
-cmd1="singularity exec $IMAGE Rscript $INT_SCRIPT -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $INT_PFX" # save run command in log file
+cmd1="singularity run $IMAGE intersect -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $INT_PFX" # save run command in log file
 
 echo -e ">>> Running intersect script...\n${cmd1}\n"
 $cmd1
@@ -44,8 +44,8 @@ echo -e ">>>Intersect:\nIntersection complete.\nlncRNA IDs:\n${INT_PFX}_final_id
 
 # =======>------- Pull seqs and gtf -------<======== #
 
-CAN_SEQS="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
-CAN_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
+CAN_SEQS="${BASE}/03_outputs/05_stringtie/EchCo_candidates.fasta"
+CAN_GTF="${BASE}/03_outputs/05_stringtie/EchCo_candidates.gtf"
 
 echo -e ">>>Pulling sequences and gtf for final lncRNA IDs...\nInput files:\n${CAN_SEQS}\n${CAN_GTF}\n...\n"
 
@@ -66,13 +66,10 @@ grep -Fwf ${INT_PFX}_final_ids.txt ${CAN_GTF} > ${INT_PFX}_lncRNA.gtf
 
 # 1. Generate classifications file via FEELnc_classifier.pl
 
-FEELnc_IMG="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/FEELnc.sif"
-FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/feelnc"
+FEELnc_IMG="${BASE}/images/FEELnc2.sif"
+FEELNC_DIR="${BASE}/02_scripts/feelnc"
 LNC_GTF="${INT_PFX}_lncRNA.gtf"
-mRNA_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
-CLASS_OUT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/11_classify"
-
-mkdir -p $CLASS_OUT
+mRNA_GTF="${BASE}/01_inputs/EchCo_mRNA.gtf"
 
 # 2. Run the classifier
 cmd4="singularity exec \
@@ -83,7 +80,7 @@ cmd4="singularity exec \
     -a $mRNA_GTF \
     -w 10000 \
     -m 100000 \
-    -v 1 > '${CLASS_OUT}/species_lncRNA_classes.txt'
+    -v 1 > '${INT_CLASS_OUT}/EchCo_lncRNA_classes.txt'
 "
 
 echo -e ">>> Running FEELnc_classifier.pl...\n${cmd4}\n"
@@ -96,15 +93,30 @@ singularity exec \
     -a $mRNA_GTF \
     -w 10000 \
     -m 100000 \
-    -v 1 > "${CLASS_OUT}/species_lncRNA_classes.txt"
+    -v 1 > "${INT_CLASS_OUT}/EchCo_lncRNA_classes.txt"
 
 # 3. Parse output file
-CLASS_SCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/classifications.R"
-
-cmd5="singularity exec $IMAGE Rscript $CLASS_SCRIPT -i ${CLASS_OUT}/species_lncRNA_classes.txt -o $CLASS_OUT"
+cmd5="singularity run $IMAGE classify -i ${INT_CLASS_OUT}/EchCo_lncRNA_classes.txt -o $INT_CLASS_OUT"
 
 echo -e ">>> Running classification script...\n${cmd5}\n"
 $cmd5 
 
 echo -e ">>>Classification complete."
+
+# =======>------- Intersect lncRNA/TE -------<======== #
+
+TE_GFF3="${BASE}/01_inputs/EchCo_TEanno.gff3"
+
+echo -e ">>>Intersect lncRNA/TE:\nInput files:\n${LNC_GTF}\n${TE_GFF3}\n...\n"
+
+# Point at a host copy for iterating, instead of the one baked into the image
+TE_SCRIPT_DEV="${BASE}/02_scripts/intersect_lncRNA_TE.R"
+
+cmd6="singularity exec $IMAGE Rscript $TE_SCRIPT_DEV -g $TE_GFF3 -t $LNC_GTF -o $INT_CLASS_OUT"
+
+echo -e ">>> Running lncRNA/TE intersection script...\n${cmd6}\n"
+$cmd6
+
+echo -e ">>>Intersect lncRNA/TE:\nIntersection complete.\nSummary table:\n${INT_CLASS_OUT}/TE_lncRNA_intersect.txt\n"
+
 date
