@@ -58,6 +58,11 @@ cat("[1/4] Importing TE GFF3 and lncRNA GTF...\n")
 te_gr     <- import(opt$gff3, format = "gff3")
 lncrna_gr <- import(opt$gtf, format = "gtf")
 
+# GTF/GFF3 score fields are usually "." (imported as NA); BED export
+# requires a non-NA numeric score, so zero it out here.
+score(te_gr) <- 0
+score(lncrna_gr) <- 0
+
 # 4. Export Full BED files (rtracklayer converts to 0-based BED)
 cat("[2/4] Exporting full BED files...\n")
 export(te_gr, te_bed_path, format = "BED")
