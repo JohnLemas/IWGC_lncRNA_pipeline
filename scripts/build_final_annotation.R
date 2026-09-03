@@ -32,49 +32,53 @@ final_ids <- read_lines(file.path(d, paste0(pfx, "_final_ids.txt")))
 base <- tibble(ID = final_ids)
 cat("Loaded", nrow(base), "final lncRNA IDs\n")
 
-# ---- 2. Per-tool pass/fail summary ----
-summary_df <- read_csv(file.path(d, paste0(pfx, "_intersection_summary.csv")),
-                        show_col_types = FALSE)
-base <- left_join(base, summary_df, by = "ID")
+# ---- 2. Chr/Start/Stop from the lncRNA GTF (transcript-level rows) ----
+gtf_path <- file.path(d, paste0(pfx, "_lncRNA.gtf"))
+gtf_df <- read_tsv(gtf_path, col_names = FALSE, comment = "#",
+                    col_types = cols(.default = "c"), show_col_types = FALSE)
+colnames(gtf_df)[1:9] <- c("Chr", "source", "feature", "Start", "Stop",
+                            "score", "strand", "frame", "attributes")
+
+coords_df <- gtf_df %>%
+  filter(feature == "transcript") %>%
+  mutate(ID = str_match(attributes, 'transcript_id "([^"]+)"')[, 2]) %>%
+  select(Chr, Start, Stop, ID) %>%
+  mutate(Start = as.integer(Start), Stop = as.integer(Stop))
+
+base <- left_join(base, coords_df, by = "ID")
 
 # ---- 3. FEELnc classification (best hit per transcript) ----
 classes_df <- read_tsv(file.path(d, paste0(pfx, "_lncRNA_classes.txt")),
                         show_col_types = FALSE) %>%
   filter(isBest == 1) %>%
   rename(ID = lncRNA_transcript) %>%
-  select(ID, lncRNA_gene, partnerRNA_gene, partnerRNA_transcript,
-         direction, type, subtype, location, distance)
+  select(ID, lncRNA_gene, partnerRNA_gene, direction, type, subtype, location)
 
 base <- left_join(base, classes_df, by = "ID")
 
-# ---- 4. TE overlap summary (collapsed to one row per lncRNA) ----
+# ---- 4. TE overlap types (collapsed to one row per lncRNA) ----
 te_path <- file.path(d, "TE_lncRNA_intersect.txt")
 if (file.exists(te_path)) {
   te_df <- read_tsv(te_path, show_col_types = FALSE)
   te_summary <- te_df %>%
     group_by(LncRNA_ID) %>%
-    summarise(
-      TE_overlap_count   = n(),
-      TE_types           = paste(sort(unique(TE_ID)), collapse = ";"),
-      TE_total_overlap_bp = sum(Overlap),
-      .groups = "drop"
-    ) %>%
+    summarise(TE_types = paste(sort(unique(TE_ID)), collapse = ";"), .groups = "drop") %>%
     rename(ID = LncRNA_ID)
 
   base <- left_join(base, te_summary, by = "ID")
 } else {
-  cat("Warning:", te_path, "not found, skipping TE overlap columns\n")
+  cat("Warning:", te_path, "not found, skipping TE_types column\n")
+  base$TE_types <- NA
 }
 
-# Fill in "no TE overlap" defaults rather than leaving NA
-base <- base %>%
-  mutate(
-    TE_overlap_count    = ifelse(is.na(TE_overlap_count), 0, TE_overlap_count),
-    TE_types            = ifelse(is.na(TE_types), "None", TE_types),
-    TE_total_overlap_bp = ifelse(is.na(TE_total_overlap_bp), 0, TE_total_overlap_bp)
-  )
+base$TE_types <- ifelse(is.na(base$TE_types), "None", base$TE_types)
 
-# ---- 5. Write final annotation table ----
-write_tsv(base, opt$out, na = "NA")
+# ---- 5. Final column order ----
+final_df <- base %>%
+  select(Chr, Start, Stop, lncRNA_gene, ID, partnerRNA_gene,
+         direction, type, subtype, location, TE_types)
+
+# ---- 6. Write final annotation table ----
+write_tsv(final_df, opt$out, na = "NA")
 cat("Final annotation table written to:", opt$out, "\n")
-cat("Rows:", nrow(base), " Columns:", ncol(base), "\n")
+cat("Rows:", nrow(final_df), " Columns:", ncol(final_df), "\n")
