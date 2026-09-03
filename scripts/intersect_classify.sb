@@ -109,14 +109,25 @@ TE_GFF3="${BASE}/01_inputs/EchCo_TEanno.gff3"
 
 echo -e ">>>Intersect lncRNA/TE:\nInput files:\n${LNC_GTF}\n${TE_GFF3}\n...\n"
 
-# Point at a host copy for iterating, instead of the one baked into the image
-TE_SCRIPT_DEV="${BASE}/02_scripts/intersect_lncRNA_TE.R"
-
-cmd6="singularity exec $IMAGE Rscript $TE_SCRIPT_DEV -g $TE_GFF3 -t $LNC_GTF -o $INT_CLASS_OUT"
+cmd6="singularity run $IMAGE intersect_te -g $TE_GFF3 -t $LNC_GTF -o $INT_CLASS_OUT"
 
 echo -e ">>> Running lncRNA/TE intersection script...\n${cmd6}\n"
 $cmd6
 
 echo -e ">>>Intersect lncRNA/TE:\nIntersection complete.\nSummary table:\n${INT_CLASS_OUT}/TE_lncRNA_intersect.txt\n"
+
+# =======>------- Finalize annotation -------<======== #
+
+PREFIX="EchCo"
+FINAL_TSV="${INT_CLASS_OUT}/${PREFIX}_final_annotation.tsv"
+
+echo -e ">>>Finalize:\nBuilding final annotation table...\nInput dir:\n${INT_CLASS_OUT}\n...\n"
+
+cmd7="singularity run $IMAGE finalize -d $INT_CLASS_OUT -o $FINAL_TSV -p $PREFIX"
+
+echo -e ">>> Running build_final_annotation.R...\n${cmd7}\n"
+$cmd7
+
+echo -e ">>>Finalize:\nFinal annotation table complete:\n${FINAL_TSV}\n"
 
 date
