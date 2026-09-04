@@ -1,9 +1,7 @@
 #!/usr/bin/env Rscript
-
 library(optparse)
 library(seqinr)
 library(LncFinder)
-
 # ==========================================
 # DEFINE EXPECTED COMMAND-LINE FLAGS
 # ==========================================
@@ -15,36 +13,36 @@ option_list <- list(
   make_option(c("-p", "--cores"), type = "integer", default = 1,
               help = "Number of parallel CPU cores to use [default %default]", metavar = "integer"),
   make_option(c("-m", "--model"), type = "character", default = "wheat",
-              help = "Model type: 'wheat' (monocot), 'dicot', 'human', 'mouse', or 'other' [default %default]", metavar = "character")
+              help = "Model type: 'wheat' (only plant-trained model LncFinder ships), 'human', or 'mouse' [default %default]",
+              metavar = "character")
 )
-
 opt <- parse_args(OptionParser(option_list = option_list))
-
 if (is.null(opt$fasta) || is.null(opt$out)) {
   stop("CRITICAL ERROR: Both flags -i/--fasta and -o/--out must be provided.\n", call. = FALSE)
 }
 
-# Map user-friendly model flags to LncFinder internal parameters
+# ==========================================
+# VALIDATE MODEL CHOICE
+# ==========================================
+# LncFinder only ships three pre-built models: human, mouse, wheat.
+# There is no "dicot", "A.thaliana", or "other" model in this package.
+# For dicots (e.g. soybean / g.max), "wheat" is the closest available option
+# (it's the only plant-trained model), but it was trained on a monocot, so
+# expect reduced accuracy relative to a model trained on dicot sequences.
+# For real accuracy on a dicot species, train a custom model with
+# make_frequencies() + build_model() using a dicot reference transcriptome.
 model_type <- tolower(opt$model)
-
-if (model_type == "wheat") {
-  freq_file <- "wheat"
-  svm_mod   <- "wheat"
-} else if (model_type == "dicot") {
-  freq_file <- "A.thaliana"
-  svm_mod   <- "A.thaliana"
-} else if (model_type == "human") {
-  freq_file <- "human"
-  svm_mod   <- "human"
-} else if (model_type == "mouse") {
-  freq_file <- "mouse"
-  svm_mod   <- "mouse"
-} else if (model_type == "other") {
-  freq_file <- "A.thaliana"
-  svm_mod   <- "human"
-} else {
-  stop(sprintf("CRITICAL ERROR: Invalid model '%s'. Choose from: wheat, dicot, human, mouse, other.\n", opt$model), call. = FALSE)
+valid_models <- c("wheat", "human", "mouse")
+if (!(model_type %in% valid_models)) {
+  stop(sprintf(paste0(
+    "CRITICAL ERROR: Invalid model '%s'. LncFinder only ships pre-built models for: %s.\n",
+    "  There is no dicot/A.thaliana/other model in this package.\n",
+    "  For dicot species, use 'wheat' as the closest available option, or train\n",
+    "  a custom model with make_frequencies()/build_model() on your own reference data.\n"
+  ), opt$model, paste(valid_models, collapse = ", ")), call. = FALSE)
 }
+freq_file <- model_type
+svm_mod   <- model_type
 
 # Ensure output directory exists
 output_dir <- dirname(opt$out)
@@ -59,13 +57,17 @@ raw_fasta <- read.fasta(opt$fasta, seqtype = "DNA", as.string = TRUE)
 seq_lengths <- sapply(raw_fasta, nchar)
 filtered_fasta <- raw_fasta[seq_lengths >= 200 & seq_lengths <= 5000]
 
-cat(sprintf(">>> Filtered out %d outlier sequences. Processing %d valid candidates.\n", 
+cat(sprintf(">>> Filtered out %d outlier sequences. Processing %d valid candidates.\n",
             length(raw_fasta) - length(filtered_fasta), length(filtered_fasta)))
+
+if (length(filtered_fasta) == 0) {
+  stop("CRITICAL ERROR: No sequences survived the length filter (200-5000 nt).\n", call. = FALSE)
+}
 
 filtered_fasta_path <- file.path(output_dir, "filtered_candidates.fasta")
 write.fasta(
-  sequences = filtered_fasta, 
-  names     = names(filtered_fasta), 
+  sequences = filtered_fasta,
+  names     = names(filtered_fasta),
   file.out  = filtered_fasta_path
 )
 
@@ -80,8 +82,13 @@ SS_Raw <- run_RNAfold(
   parallel.cores = opt$cores
 )
 
-SS_List <- as.data.frame(SS_Raw, stringsAsFactors = FALSE)
-cat(sprintf(">>> Successfully generated structured matrix with %d sequences.\n", nrow(SS_List)))
+# IMPORTANT: do NOT wrap this in as.data.frame(). run_RNAfold() returns a
+# list structured for direct use by lnc_finder(format = "SS") - each element
+# is a per-sequence vector (raw seq, dot-bracket structure, MFE, etc).
+# Coercing that list to a data.frame transposes it: sequences become columns
+# and the handful of per-sequence fields become rows, so nrow() ends up
+# reporting the field count (e.g. 3) instead of the sequence count.
+cat(sprintf(">>> Successfully folded %d sequences with RNAfold.\n", length(SS_Raw)))
 
 # ==========================================
 # STEP 3: RUN LNCFINDER SVM PREDICTION
@@ -89,9 +96,9 @@ cat(sprintf(">>> Successfully generated structured matrix with %d sequences.\n",
 cat(sprintf(">>> [Step 3] Running LncFinder SVM model using selected model profile: '%s'...\n", model_type))
 
 results <- lnc_finder(
-  Sequences        = SS_List,     
-  SS.features      = TRUE,        
-  format           = "SS",        
+  Sequences        = SS_Raw,
+  SS.features      = TRUE,
+  format           = "SS",
   frequencies.file = freq_file,
   svm.model        = svm_mod,
   parallel.cores   = opt$cores
