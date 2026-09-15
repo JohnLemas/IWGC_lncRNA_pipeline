@@ -1,5 +1,5 @@
 cpat_plant
 FEELnc
-lncfinder
 plant_lnc_boost
 rbio_tools
+sortmerna
