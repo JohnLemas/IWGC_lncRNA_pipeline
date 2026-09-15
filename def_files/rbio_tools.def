@@ -5,10 +5,34 @@ From: ubuntu:22.04
     /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/intersect_ids.R /usr/local/bin/intersect_ids.R
     /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/classifications.R /usr/local/bin/classifications.R
     /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R /usr/local/bin/lncFinder.R
+    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/intersect_lncRNA_TE.R /usr/local/bin/intersect_lncRNA_TE.R
+    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/build_final_annotation.R /usr/local/bin/build_final_annotation.R
+    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/parse_gffcompare_tracking.R /usr/local/bin/parse_gffcompare_tracking.R
+    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/add_tissue_annotation.R /usr/local/bin/add_tissue_annotation.R
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PATH=/usr/local/bin:$PATH
 
 %post
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update && apt-get install -y \
+
+    # 1. System packages, build tools, and R dependencies
+    apt-get update && apt-get install -y --no-install-recommends \
+        wget \
+        ca-certificates \
+        build-essential \
+        gfortran \
+        libgomp1 \
+        pkg-config \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        liblzma-dev \
+        libdeflate-dev \
         r-base \
         r-cran-tidyverse \
         r-cran-optparse \
@@ -20,19 +44,31 @@ From: ubuntu:22.04
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
-    # Install LncFinder directly from CRAN
+    # 2. Compile ViennaRNA from source so 'RNAfold' is available in $PATH for LncFinder
+    cd /tmp
+    wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_7_x/ViennaRNA-2.7.2.tar.gz
+    tar -zxvf ViennaRNA-2.7.2.tar.gz
+    cd ViennaRNA-2.7.2
+    ./configure --without-perl --without-python --without-python3 --disable-all-bind
+    make -j$(nproc)
+    make install
+    cd /tmp
+    rm -rf ViennaRNA-2.7.2*
+
+    # 3. Install LncFinder directly from CRAN
     Rscript -e "install.packages('LncFinder', repos='https://cloud.r-project.org')"
 
-    # Ensure all pipeline scripts are in the system path and executable
-    chmod +x /usr/local/bin/intersect_ids.R
-    chmod +x /usr/local/bin/classifications.R
-    chmod +x /usr/local/bin/lncFinder.R
+    # 3b. Install Bioconductor packages needed by intersect_lncRNA_TE.R
+    Rscript -e "install.packages('BiocManager', repos='https://cloud.r-project.org')"
+    Rscript -e "BiocManager::install(c('rtracklayer', 'GenomicRanges'), update = FALSE, ask = FALSE)"
 
-%environment
-    export LC_ALL=C
+    # Verify the Bioconductor packages actually installed; fail the build loudly if not
+    Rscript -e "library(rtracklayer); library(GenomicRanges)" || { echo "ERROR: rtracklayer/GenomicRanges failed to install"; exit 1; }
+
+    # 4. FIX PERMISSIONS: Ensure all baked-in scripts are world-readable and executable
+    chmod -R 755 /usr/local/bin/
 
 %runscript
-    # The unified routing hub for your repository workflow
     if [ "$1" = "intersect" ]; then
         shift
         exec Rscript /usr/local/bin/intersect_ids.R "$@"
@@ -42,18 +78,22 @@ From: ubuntu:22.04
     elif [ "$1" = "lnc_predict" ]; then
         shift
         exec Rscript /usr/local/bin/lncFinder.R "$@"
+    elif [ "$1" = "intersect_te" ]; then
+        shift
+        exec Rscript /usr/local/bin/intersect_lncRNA_TE.R "$@"
+    elif [ "$1" = "finalize" ]; then
+        shift
+        exec Rscript /usr/local/bin/build_final_annotation.R "$@"
+    elif [ "$1" = "track" ]; then
+        shift
+        exec Rscript /usr/local/bin/parse_gffcompare_tracking.R "$@"
+    elif [ "$1" = "add_tissue" ]; then
+        shift
+        exec Rscript /usr/local/bin/add_tissue_annotation.R "$@"
     else
-        echo "=========================================================================="
-        echo "Usage: singularity run rbio_tools.sif [tool_name] [options]"
-        echo "=========================================================================="
-        echo "Available tools:"
-        echo "  intersect   - Runs intersect_ids.R"
-        echo "  classify    - Runs classifications.R"
-        echo "  lnc_predict - Runs lncFinder.R"
-        echo "=========================================================================="
+        echo "Usage: singularity run rbio_tools.sif [intersect|classify|lnc_predict|intersect_te|finalize|track|add_tissue] [options]"
     fi
 
 %labels
-    Author "lemasjoh, Gemini"
-    Version "2.0_Unified_R_Suites"
-    Description "Combined R tools for lncRNA pipelines including ID routing, FEELnc parsing, and LncFinder ML modeling."
+    Author "lemasjoh, Claude Sonnet 5"
+    Description "Single unified image containing R, ViennaRNA, and lncRNA processing scripts."
