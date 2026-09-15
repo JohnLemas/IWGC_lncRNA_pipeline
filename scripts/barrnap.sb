@@ -1,10 +1,9 @@
 #!/bin/bash --login
 #SBATCH --job-name=barrnap_custom_db
-#SBATCH --error=%x_%j.err
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --time=04:00:00
-#SBATCH --output=/path/to/logs/%x_%j.out
+#SBATCH --time=00:30:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/sortmerna/%x_%j.out
 
 set -euo pipefail
 
@@ -12,53 +11,46 @@ set -euo pipefail
 # USER-CONFIGURABLE SETTINGS
 # ----------------------------------------------------------------------------
 
-# Path to the SortMeRNA + barrnap Singularity image
-SIF=/path/to/sortmerna.sif
+SIF=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/images/sortmerna.sif
+GENOME=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/01_inputs/species.chromosomes.fa
 
-# Genome assembly FASTA to annotate (haplotype-resolved chromosomes + Chr00
-# together in one file works fine - barrnap doesn't need contigs pre-sorted).
-GENOME=/path/to/genome.fasta
-
-# Kingdoms to run barrnap with. For plant genomes this covers nuclear (euk),
-# chloroplast (bac, since chloroplasts are bacterial-derived), and
-# mitochondrial (mito, review hits manually - plant mitogenomes are more
-# divergent than the model's training data). Add "arc" to the list if needed.
 KINGDOMS=(bac euk mito)
 
-# Where to write barrnap outputs and the final clustered database
-OUTDIR=/path/to/output/rrna_db_build
-mkdir -p "${OUTDIR}/per_genome"
+OUTDIR=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/databases/species_barrnap
+mkdir -p "${OUTDIR}"
 
-# Number of threads for barrnap and cd-hit-est (matches --cpus-per-task above)
 THREADS=${SLURM_CPUS_PER_TASK:-8}
-
-# cd-hit-est clustering identity threshold (0.97 = cluster at 97% identity,
-# similar to how SortMeRNA's own default databases are clustered)
 CDHIT_IDENTITY=0.97
 
-# Final combined/clustered outputs
 COMBINED_FASTA="${OUTDIR}/combined_rrna.fasta"
 CUSTOM_DB="${OUTDIR}/custom_db.fasta"
+INDEX_DIR="${OUTDIR}/idx"
 
 # ----------------------------------------------------------------------------
 # STEP 1: Run barrnap on the genome, once per kingdom, via the image
 # ----------------------------------------------------------------------------
 
-name=$(basename "${GENOME}" .fasta)
+filename=$(basename "${GENOME}")
+name="${filename%.*}"
 GENOME_DIR=$(dirname "${GENOME}")
 
 echo "[$(date)] Running barrnap for kingdoms: ${KINGDOMS[*]} on ${GENOME}"
 
+KINGDOM_FASTAS=()
+
 for kingdom in "${KINGDOMS[@]}"; do
     echo "  -> ${name} [${kingdom}]"
+    
+    out_fasta="${OUTDIR}/${name}_${kingdom}_rrna.fasta"
+    KINGDOM_FASTAS+=("${out_fasta}")
 
     singularity exec -B "${GENOME_DIR}:${GENOME_DIR}" -B "${OUTDIR}:${OUTDIR}" "${SIF}" \
         barrnap \
             --kingdom "${kingdom}" \
             --threads "${THREADS}" \
-            --outseq "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.fasta" \
+            --outseq "${out_fasta}" \
             "${GENOME}" \
-        > "${OUTDIR}/per_genome/${name}_${kingdom}_rrna.gff"
+        > "${OUTDIR}/${name}_${kingdom}_rrna.gff"
 done
 
 # ----------------------------------------------------------------------------
@@ -66,7 +58,7 @@ done
 # ----------------------------------------------------------------------------
 
 echo "[$(date)] Concatenating per-kingdom rRNA FASTA files"
-cat "${OUTDIR}"/per_genome/*_rrna.fasta > "${COMBINED_FASTA}"
+cat "${KINGDOM_FASTAS[@]}" > "${COMBINED_FASTA}"
 
 n_seqs=$(grep -c '^>' "${COMBINED_FASTA}" || true)
 echo "  Combined FASTA contains ${n_seqs} sequences"
@@ -77,12 +69,12 @@ if [ "${n_seqs}" -eq 0 ]; then
 fi
 
 # ----------------------------------------------------------------------------
-# STEP 3: Dereplicate/cluster with cd-hit-est (cluster module, not the image)
+# STEP 3: Dereplicate/cluster with cd-hit-est
 # ----------------------------------------------------------------------------
 
 echo "[$(date)] Loading cd-hit module"
-module load cd-hit   # adjust to your cluster's actual module name/version,
-                      # e.g. `module load cd-hit/4.8.1` or `module load CD-HIT`
+ml purge
+ml load CD-HIT
 
 echo "[$(date)] Clustering combined FASTA at ${CDHIT_IDENTITY} identity"
 cd-hit-est \
@@ -94,9 +86,23 @@ cd-hit-est \
     -T "${THREADS}" \
     -d 0
 
-module unload cd-hit
+ml purge
 
-echo "[$(date)] Done. Custom SortMeRNA reference database written to:"
-echo "  ${CUSTOM_DB}"
-echo "Use it alongside your existing databases, e.g.:"
-echo "  singularity exec ${SIF} sortmerna --ref existing_db.fasta --ref ${CUSTOM_DB} --reads reads.fastq --workdir /path/to/workdir"
+# ----------------------------------------------------------------------------
+# STEP 4: Index the custom database with SortMeRNA
+# ----------------------------------------------------------------------------
+
+echo "[$(date)] Indexing custom rRNA database for SortMeRNA"
+mkdir -p "${INDEX_DIR}"
+
+singularity exec -B "${OUTDIR}:${OUTDIR}" "${SIF}" \
+    sortmerna \
+        --ref "${CUSTOM_DB}" \
+        --idx-dir "${INDEX_DIR}" \
+        --index 1 \
+        --task 5 \
+        --threads "${THREADS}"
+
+echo "[$(date)] Done. Indexed database available at:"
+echo "  FASTA: ${CUSTOM_DB}"
+echo "  Index directory: ${INDEX_DIR}"

@@ -1,17 +1,18 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_merge
+#SBATCH --job-name=merge
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x_%j.out
 
 # ========>-------- Merge assembled GTF files from StringTie into a master GTF file --------<======== #
 
 # 1. Paths
-ID_FILE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt"
-GTF_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/SRR_assemblies"
-REF_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
-OUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_denovo_trans.gtf"
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+ID_FILE="${BASE}/species/01_inputs/species_sra_IDs.txt"
+GTF_DIR="${BASE}/species/03_outputs/04_stringtie/SRR_assemblies"
+REF_GTF="${BASE}/species/01_inputs/species_mRNA.gtf"
+OUT_GTF="${BASE}/species/03_outputs/04_stringtie/species_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array
 mapfile -t SRA_IDS < "$ID_FILE"
@@ -42,9 +43,9 @@ echo "Master Merge Complete: $OUT_GTF"
 
 # ========>-------- Extract the transcript sequences from the master GTF file --------<======== #
 
-CAN_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
-SEQ_OUT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
-GENOME="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species.chromosomes.fa"
+CAN_GTF="${BASE}/species/03_outputs/04_stringtie/species_candidates.gtf"
+SEQ_OUT="${BASE}/species/03_outputs/04_stringtie/species_candidates.fasta"
+GENOME="${BASE}/species/01_inputs/species.chromosomes.fa"
 
 echo -e "Extracting candidate transcript sequences from $(basename $OUT_GTF)...\n"
 

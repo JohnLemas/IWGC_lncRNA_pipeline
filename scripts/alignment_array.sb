@@ -1,29 +1,34 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_STAR_align
-#SBATCH --array=1-[# of samples] # wc -l species_sra_IDs.txt to get the number of samples
+#SBATCH --job-name=STAR_align
+#SBATCH --array=1-160
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=02:00:00 # typical mapping rates for corn and soy completed this step in well under an hour
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/species_align/%x-%j_%A_%a.out # generates a ton of logs. use subdirectory in log file path
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/species_align/%x-%a.out # generates a ton of logs. use subdirectory in log file path
 
 # 1. Paths
-LIST="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_sra_IDs.txt" # list of sra accessions from EDirect query
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+
+LIST="${BASE}/species/01_inputs/species_sra_IDs.txt" # list of sra accessions from EDirect query
 ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs) # pulls the sra accession for the current array task ID
-DATA_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/01_fastp" # this is where the trimmed fastq files are located, which should be named according to the logic below (e.g., SRR1234567_1_trim.fastq.gz for paired-end or SRR1234567_trim.fastq.gz for single-end)
-INDEX_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_indexed" # indexed genome from star_genomegeneratete.sb script
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/02_STAR" # this is where the STAR output will go, which will be organized by sample ID (e.g., SRR1234567_Aligned.sortedByCoord.out.bam)
+
+DATA_DIR="${BASE}/species/03_outputs/02_sortmerna/clean_reads" # this is where the cleaned, trimmed SortMeRNA-filtered reads are located
+INDEX_DIR="${BASE}/species/01_inputs/species_indexed" # indexed genome from star_genomegeneratete.sb script
+OUT_DIR="${BASE}/species/03_outputs/03_STAR" # this is where the STAR output will go, which will be organized by sample ID (e.g., SRR1234567_Aligned.sortedByCoord.out.bam)
 
 mkdir -p $OUT_DIR
 
+set -euo pipefail
+
 # 2. Filename Logic
 # Check for paired-end first
-if [ -f "${DATA_DIR}/${ID}_1_trim.fastq.gz" ]; then
+if [ -f "${DATA_DIR}/${ID}_1_sortmerna.fastq.gz" ]; then
     echo "Sample $ID: PAIRED-END detected"
-    READS="${DATA_DIR}/${ID}_1_trim.fastq.gz ${DATA_DIR}/${ID}_2_trim.fastq.gz"
+    READS="${DATA_DIR}/${ID}_1_sortmerna.fastq.gz ${DATA_DIR}/${ID}_2_sortmerna.fastq.gz"
 # Otherwise check for single-end
-elif [ -f "${DATA_DIR}/${ID}_trim.fastq.gz" ]; then
+elif [ -f "${DATA_DIR}/${ID}_singles_sortmerna.fastq.gz" ]; then
     echo "Sample $ID: SINGLE-END detected"
-    READS="${DATA_DIR}/${ID}_trim.fastq.gz"
+    READS="${DATA_DIR}/${ID}_singles_sortmerna.fastq.gz"
 else
     echo "ERROR: No files found for $ID in $DATA_DIR"
     exit 1

@@ -1,32 +1,49 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_lncFinder
+#SBATCH --job-name=lncFinder
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=128G
-#SBATCH --time=1-00:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+#SBATCH --mem=64G
+#SBATCH --time=12:00:00
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x_%j.out
 
 # Paths
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/rbio_tools_v2.sif"
-RSCRIPT="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R"
-OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder"
-INPUT_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/04_gffread/species_candidates.fasta"
-OUTPUT_CSV="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/08_lncFinder/species_lncFinder_results.csv"
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+IMAGE="${BASE}/images/rbio_tools_dev.sif"
+OUTPUT_DIR="${BASE}/species/03_outputs/08_lncFinder"
+INPUT_FASTA="${BASE}/species/03_outputs/04_stringtie/species_candidates.fasta"
+OUTPUT_CSV="${OUTPUT_DIR}/species_lncFinder_results.csv"
+
+mkdir -p ${OUTPUT_DIR}
+
+#lncFinder model designation: wheat, human, mouse
+MODEL_TYPE="wheat"
 
 mkdir -p $OUTPUT_DIR
 
 echo "=========================================================="
-echo "Parsing and LncFinder Matrix Processing"
+echo "Starting LncFinder Matrix Processing"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Allocated Cores: $SLURM_CPUS_PER_TASK"
+echo "Allocated Memory: $SLURM_MEM_PER_NODE MB"
+echo "Selected Model: $MODEL_TYPE"
 echo "=========================================================="
 date
 
 # Run the unified R script inside the container
-singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
-    Rscript $RSCRIPT \
-    -i "$INPUT_FASTA" \
-    -o "$OUTPUT_CSV" \
-    -p $SLURM_CPUS_PER_TASK
+singularity run \
+    --bind /mnt/scratch/lemasjoh \
+    "$IMAGE" lnc_predict \
+    --fasta "$INPUT_FASTA" \
+    --out "$OUTPUT_CSV" \
+    --cores "$SLURM_CPUS_PER_TASK" \
+    --model "$MODEL_TYPE"
+
+EXIT_CODE=$?
 
 echo "=========================================================="
-echo "PIPELINE FINISHED SUCCESSFULLY"
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "PIPELINE FINISHED SUCCESSFULLY"
+else
+    echo "PIPELINE FAILED WITH EXIT CODE $EXIT_CODE"
+fi
 echo "=========================================================="
 date

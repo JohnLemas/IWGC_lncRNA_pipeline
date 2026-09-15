@@ -115,4 +115,4 @@ results <- results[, c("Sequence_ID", setdiff(colnames(results), "Sequence_ID"))
 
 # Save without R's automatic row index column
 write.csv(results, opt$out, row.names = FALSE)
-cat(">>> Success! Results cleanly saved to:\n\t", opt$out, "\n")
+cat(">>> Success! Results saved to:\n\t", opt$out, "\n")

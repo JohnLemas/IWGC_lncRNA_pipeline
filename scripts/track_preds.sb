@@ -3,13 +3,14 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G                    # Bumped memory to survive the 165-sample joint matrix generation
 #SBATCH --time=00:30:00               # Bumped to 30 mins to account for heavy joint-matrix parsing
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x_%j.out
 
 # ========>------- Create tracking files -------<======== #
 
-SRR_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/SRR_assemblies"
-OUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/13_trace"
-REF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+SRR_DIR="${BASE}/species/03_outputs/04_stringtie/SRR_assemblies"
+OUT_DIR="${BASE}/species/03_outputs/11_trace"
+REF="${BASE}/species/03_outputs/04_stringtie/species_candidates.gtf"
 LIST="$OUT_DIR/sra_file_list.txt"
 
 mkdir -p $OUT_DIR
@@ -25,13 +26,13 @@ gffcompare -r $REF -i $LIST -o $OUT_DIR/candidate
 
 # ========>------- Parse the output files -------<======== #
 
-SCRIPT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts"
+SCRIPT_DIR="${BASE}/scripts"
 TRACK_FILE="$OUT_DIR/candidate.tracking"
 FINAL_OUT="$OUT_DIR/species_tracking_summary.tsv"
 
 # Automatically find whichever species lncRNA.fasta file is currently being calculated
 # (Matches files inside your parallel 10_intersect directories)
-VALIDATED_FASTA="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/10_intersect/species_lncRNA.fasta"
+VALIDATED_FASTA="${BASE}/species/03_outputs/10_int_class/species_lncRNA.fasta"
 
 ml purge
 ml load SciPy-bundle/eDMFT-intel-2023a # necessary python dependencies

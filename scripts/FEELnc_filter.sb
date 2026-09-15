@@ -1,17 +1,18 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_feelnc_filter
+#SBATCH --job-name=feelnc_filter
 #SBATCH --cpus-per-task=20
 #SBATCH --mem=64G
 #SBATCH --time=04:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x_%j.out
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x_%j.out
 
 # 1. Paths
-IMAGE="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/def_files/FEELnc.sif"
-INPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/03_stringtie/species_candidates.gtf"
-REF_ANN="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
-OUTPUT_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc"
-OUTPUT_GTF="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
-FEELNC_DIR="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/feelnc"
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+IMAGE="${BASE}/images/FEELnc2.sif"
+INPUT_GTF="${BASE}/species/03_outputs/04_stringtie/species_candidates.gtf"
+REF_ANN="${BASE}/species/01_inputs/species_mRNA.gtf"
+OUTPUT_DIR="${BASE}/species/03_outputs/05_FEELnc"
+OUTPUT_GTF="${BASE}/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
+FEELNC_DIR="${BASE}/scripts/feelnc"
 
 mkdir -p $OUTPUT_DIR
 
