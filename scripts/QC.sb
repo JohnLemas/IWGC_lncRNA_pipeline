@@ -13,18 +13,32 @@ ml load MultiQC
 BASE="/path/to/working/dir" # change this to reflect your working directory
 
 # ==============================================================================
-# 1. QC for FastP Reads
+# 2. QC for Raw Reads
+# ==============================================================================
+IN_RAW="${BASE}/01_inputs/raw_reads"
+OUT_RAW="${BASE}/01_inputs/raw_reads/QC"
+
+mkdir -p "${OUT_RAW}/multiQC"
+
+# Run FastQC on all fastp gz files
+fastqc -t 8 -o "${OUT_RAW}" "${IN_RAW}"/*.gz
+
+# Run MultiQC on fastp QC outputs
+multiqc "${OUT_RAW}" -n "raw_report" -o "${OUT_RAW}" --no-data-dir
+
+# ==============================================================================
+# 2. QC for FastP Reads
 # ==============================================================================
 IN_FASTP="${BASE}/03_outputs/01_fastp"
 OUT_FASTP="${BASE}/03_outputs/01_fastp/QC"
 
-mkdir -p "${OUT_FASTP}/multiQC"
+mkdir -p "${OUT_FASTP}/"
 
 # Run FastQC on all fastp gz files
 fastqc -t 8 -o "${OUT_FASTP}" "${IN_FASTP}"/*.gz
 
 # Run MultiQC on fastp QC outputs
-multiqc "${OUT_FASTP}" -o "${OUT_FASTP}/multiQC"
+multiqc "${OUT_FASTP}" -n "trimmed_report" -o "${OUT_FASTP}" --no-data-dir
 
 
 # ==============================================================================
@@ -39,4 +53,4 @@ mkdir -p "${OUT_CLEAN}/multiQC"
 fastqc -t 8 -o "${OUT_CLEAN}" "${IN_CLEAN}"/*.gz
 
 # Run MultiQC on clean QC outputs
-multiqc "${OUT_CLEAN}" -o "${OUT_CLEAN}/multiQC"
+multiqc "${OUT_CLEAN}" -n 'clean_reads' -o "${OUT_CLEAN}/multiQC" --no-data-dir
