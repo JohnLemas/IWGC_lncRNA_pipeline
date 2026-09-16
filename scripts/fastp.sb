@@ -1,25 +1,26 @@
 #!/bin/bash --login
 #SBATCH --job-name=fastp
-#SBATCH --array=1-160
+#SBATCH --array=1-[number of samples from wc -l species_metadata.txt]
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/fastp/%x-%j_%a.SLURMout
+#SBATCH --output=/path/to/working/dir/logs/fastp/%x-%j_%a.SLURMout
 
 # 1. Paths & Variables
 SPECIES_DIR="species"
-SCRATCH_BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
-LIST="$SCRATCH_BASE/$SPECIES_DIR/01_inputs/species_sra_IDs.txt"
+BASE="/path/to/working/dir" # change this to reflect your working directory
+LIST="${BASE}/${SPECIES_DIR}/01_inputs/species_sra_IDs.txt"
 
 # Pull the specific ID for this array task line-by-line
 ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs)
 
-IN_DIR="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/species/01_inputs/raw_fastq" 
-OUT_DIR="$SCRATCH_BASE/$SPECIES_DIR/03_outputs/01_fastp"
+IN_DIR="${BASE}/${SPECIES_DIR}/01_inputs/raw_fastq"
+OUT_DIR="${BASE}/${SPECIES_DIR}/03_outputs/01_fastp"
 mkdir -p "$OUT_DIR"
 
 # 2. Environment Setup
+# There is no module for fastp, so use a conda environment
 ml purge
-ml load Miniforge3
+ml load Miniforge3 # hpcc module for conda
 conda activate fastp
 
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $ID"

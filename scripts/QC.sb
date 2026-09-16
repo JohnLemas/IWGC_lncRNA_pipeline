@@ -3,20 +3,20 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=08:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x-%j.SLURMout
+#SBATCH --output=/path/to/working/dir/logs/%x-%j.SLURMout
 
 # Load all required modules at the start
 ml purge
 ml load FastQC/0.12.1-Java-11
 ml load MultiQC
 
-BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+BASE="/path/to/working/dir" # change this to reflect your working directory
 
 # ==============================================================================
 # 1. QC for FastP Reads
 # ==============================================================================
-IN_FASTP="${BASE}/species/03_outputs/01_fastp"
-OUT_FASTP="${BASE}/species/03_outputs/01_fastp/QC"
+IN_FASTP="${BASE}/03_outputs/01_fastp"
+OUT_FASTP="${BASE}/03_outputs/01_fastp/QC"
 
 mkdir -p "${OUT_FASTP}/multiQC"
 
@@ -30,8 +30,8 @@ multiqc "${OUT_FASTP}" -o "${OUT_FASTP}/multiQC"
 # ==============================================================================
 # 2. QC for Clean (SortMeRNA) Reads
 # ==============================================================================
-IN_CLEAN="${BASE}/species/03_outputs/02_sortmerna/clean"
-OUT_CLEAN="${BASE}/species/03_outputs/02_sortmerna/QC"
+IN_CLEAN="${BASE}/03_outputs/02_sortmerna/clean_reads"
+OUT_CLEAN="${BASE}/03_outputs/02_sortmerna/QC"
 
 mkdir -p "${OUT_CLEAN}/multiQC"
 

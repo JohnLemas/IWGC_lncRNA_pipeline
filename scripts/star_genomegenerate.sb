@@ -4,12 +4,13 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=45G
 #SBATCH --time=01:30:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/logs/%x-%j.SLURMout
+#SBATCH --output=/path/to/working/dir/logs/%x-%j.SLURMout
 
 # Paths
-GENOME="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species.chromosomes.fa"
-ANNO="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_mRNA.gtf"
-INDEX="/mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/species/01_inputs/species_indexed"
+BASE="/path/to/working/dir" # change this to reflect your working directory
+GENOME="${BASE}/01_inputs/species.chromosomes.fa" # make sure this matches the species prefix
+ANNO="${BASE}/01_inputs/species_mRNA.gtf" # make sure this matches the species prefix
+INDEX="${BASE}/01_inputs/species_indexed" # make sure this matches the species prefix
 
 echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annotation:\n\t${ANNO}"
 

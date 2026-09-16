@@ -2,8 +2,8 @@
 #SBATCH --job-name=DIAMOND
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH --time=02:00:00 # based on 165 candidates. DIAMOND is super fast
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x_%j.out
+#SBATCH --time=02:00:00 # DIAMOND is super fast
+#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
 
 # load module
 ml purge
@@ -11,11 +11,11 @@ ml load DIAMOND/2.1.8-GCC-12.3.0 # this is the current module for use in MSU HPC
 
 # Load input files
 echo -e ">>>DIAMOND:\n...loading input files and database.."
-BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
-INPUT="${BASE}/species/03_outputs/04_stringtie/species_candidates.fasta" # this is the fasta file of candidate lncRNA sequences obtained from gffread -w species_candidates.fasta -g species_genome.fa species_candidates.gtf
-OUTDIR="${BASE}/species/03_outputs/09_diamond"
-OUTPUT="${OUTDIR}/species_diamond_out.txt"
-DB="/mnt/scratch/lemasjoh/BASF/uniprot_db/uniprot_out.dmnd" # this is the DIAMOND-formatted database created from the uniprot_sprot.fasta file using diamond makedb --in uniprot_sprot.fasta -d uniprot_out.dmnd
+BASE="/path/to/working/dir" # change this to reflect your working directory
+INPUT="${BASE}/03_outputs/04_stringtie/species_candidates.fasta" # this is the fasta file of candidate lncRNA sequences obtained from gffread -w species_candidates.fasta -g species_genome.fa species_candidates.gtf
+OUTDIR="${BASE}/03_outputs/09_diamond"
+OUTPUT="${OUTDIR}/species_diamond_out.txt" # make sure this has your desired species prefix
+DB="${BASE}/databases/uniprot_out.dmnd" # this is the DIAMOND-formatted database created from the uniprot_sprot.fasta file using diamond makedb --in uniprot_sprot.fasta -d uniprot_out.dmnd
 
 echo -e ">>>DIAMOND:\nDatabase:\n\t${DB}\nInput sequences:\n\t${INPUT}"
 

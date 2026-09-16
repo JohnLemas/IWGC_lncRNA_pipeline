@@ -11,14 +11,15 @@ BASE="/path/to/working/dir"
 LIST="${BASE}/01_inputs/species_metadata.txt"
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
+# Make sure the metadata is built so that the read ID from the machine is column 1 and the new ID with tissue type info is column 2. 
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r')
 OLD_ID=$(echo "$ROW" | awk '{print $1}')
 NEW_ID=$(echo "$ROW" | awk '{print $2}')
 
 # Input reads come directly from SortMeRNA clean_reads directory
-DATA_DIR="${BASE}/03_outputs/03_sortmerna/clean_reads"
+DATA_DIR="${BASE}/03_outputs/02_sortmerna/clean_reads"
 INDEX_DIR="${BASE}/01_inputs/species_indexed"
-OUT_DIR="${BASE}/03_outputs/04_STAR"
+OUT_DIR="${BASE}/03_outputs/03_STAR"
 TMP_DIR="${OUT_DIR}/tmp_${NEW_ID}"
 
 mkdir -p "$OUT_DIR" "$TMP_DIR"

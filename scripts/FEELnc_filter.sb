@@ -3,15 +3,15 @@
 #SBATCH --cpus-per-task=20
 #SBATCH --mem=64G
 #SBATCH --time=04:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
 
 # 1. Paths
-BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
+BASE="/path/to/working/dir" # change this to reflect your working directory
 IMAGE="${BASE}/images/FEELnc2.sif"
-INPUT_GTF="${BASE}/species/03_outputs/04_stringtie/species_candidates.gtf"
-REF_ANN="${BASE}/species/01_inputs/species_mRNA.gtf"
-OUTPUT_DIR="${BASE}/species/03_outputs/05_FEELnc"
-OUTPUT_GTF="${BASE}/species/03_outputs/05_FEELnc/species_FEELnc.gtf"
+INPUT_GTF="${BASE}/03_outputs/04_stringtie/species_candidates.gtf" # make sure this has your desired species prefix
+REF_ANN="${BASE}/01_inputs/species_mRNA.gtf" # make sure this has your desired species prefix
+OUTPUT_DIR="${BASE}/03_outputs/05_FEELnc"
+OUTPUT_GTF="${BASE}/03_outputs/05_FEELnc/species_FEELnc.gtf" # make sure this has your desired species prefix
 FEELNC_DIR="${BASE}/scripts/feelnc"
 
 mkdir -p $OUTPUT_DIR

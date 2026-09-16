@@ -1,20 +1,20 @@
 #!/bin/bash --login
 #SBATCH --job-name=strg_assemble
-#SBATCH --array=1-160
+#SBATCH --array=1-[number of samples from wc -l species_metadata.txt]
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
-#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run/species/logs/stringite/%x_%a.out
+#SBATCH --output=/path/to/working/dir/logs/stringite/%x_%a.out
 
 # 1. Paths
-BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/trial_run"
-LIST="${BASE}/species/01_inputs/species_sra_IDs.txt"
-ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs) # pulls the sra accession for the current array task ID
+BASE="/path/to/working/dir" # change this to reflect your working directory
+LIST="${BASE}/01_inputs/species_metadata.txt"
+ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r' | xargs) # pulls the sample ID for the current array task ID
 
 # Input BAM directory
-BAM_DIR="${BASE}/species/03_outputs/03_STAR"
-REF_GTF="${BASE}/species/01_inputs/species_mRNA.gtf"
-OUT_DIR="${BASE}/species/03_outputs/04_stringtie/SRR_assemblies"
+BAM_DIR="${BASE}/03_outputs/03_STAR"
+REF_GTF="${BASE}/01_inputs/species_mRNA.gtf"
+OUT_DIR="${BASE}/03_outputs/04_stringtie/SRR_assemblies"
 
 mkdir -p $OUT_DIR
 

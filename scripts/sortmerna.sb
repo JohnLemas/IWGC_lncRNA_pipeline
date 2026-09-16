@@ -17,8 +17,8 @@ NEW_ID=$
 # Path to your container image (UPDATE THIS PATH TO YOUR SIF FILE)
 IMG="${BASE}/images/sortmerna.sif"
 
-IN_DIR="${BASE}/03_outputs/02_fastp"
-OUT_DIR="${BASE}/03_outputs/03_sortmerna"
+IN_DIR="${BASE}/03_outputs/01_fastp"
+OUT_DIR="${BASE}/03_outputs/02_sortmerna"
 CLEAN_DIR="${OUT_DIR}/clean_reads"
 RRNA_DIR="${OUT_DIR}/rRNA_reads"
 

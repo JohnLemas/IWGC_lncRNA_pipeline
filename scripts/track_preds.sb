@@ -16,7 +16,7 @@ BASE="/path/to/working/dir"
 PREFIX="species"
 
 ASSEMBLY_DIR="${BASE}/03_outputs/05_stringtie/sample_assemblies"
-OUT_DIR="${BASE}/03_outputs/11_trace"
+OUT_DIR="${BASE}/03_outputs/10_trace"
 REF="${BASE}/03_outputs/05_stringtie/${PREFIX}_candidates.gtf"
 LIST="${OUT_DIR}/file_list.txt"
 METADATA="${BASE}/01_inputs/${PREFIX}_metadata.txt"
