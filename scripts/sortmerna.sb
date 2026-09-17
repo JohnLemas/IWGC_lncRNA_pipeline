@@ -1,95 +1,179 @@
 #!/bin/bash --login
-#SBATCH --job-name=sortmerna
-#SBATCH --array=1-[number of samples from wc -l species_sra_IDs.txt]
+#SBATCH --job-name=species_sortmerna
+#SBATCH --array=1-23
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
-#SBATCH --time=12:00:00
-#SBATCH --output=/path/to/working/dir/logs/sortmerna/%x-%a.SLURMout
+#SBATCH --mem=48G
+#SBATCH --time=16:00:00
+#SBATCH --output=/path/to/project/dir/logs/sortmerna/%x-%A_%a.SLURMout
+
+# NOTE ON RESOURCES: bumped mem 32G->48G and time 12h->16h as a safety margin.
+# If you build a shared index first (see sortmerna_build_index.sb), you can drop
+# these back down since each task will only be aligning, not indexing.
+
+set -uo pipefail
+# Not using -e globally: the paired/single-end blocks are conditional on file
+# existence and we want explicit exit-code checks around sortmerna itself
+# rather than having the whole script die on an unrelated test failure.
 
 # 1. Paths & Variables
-BASE="/path/to/working/dir"
-LIST="${BASE}/01_inputs/species_metadata.txt"
+SCRATCH_BASE="/path/to/project/dir"
+LIST="$SCRATCH_BASE/01_inputs/species_metadata.txt"
 
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r')
 OLD_ID=$(echo "$ROW" | awk '{print $1}')
-NEW_ID=$
+NEW_ID=$(echo "$ROW" | awk '{print $2}')
 
-# Path to your container image (UPDATE THIS PATH TO YOUR SIF FILE)
-IMG="${BASE}/images/sortmerna.sif"
-
-IN_DIR="${BASE}/03_outputs/01_fastp"
-OUT_DIR="${BASE}/03_outputs/02_sortmerna"
+IN_DIR="$SCRATCH_BASE/03_outputs/02_fastp"
+OUT_DIR="$SCRATCH_BASE/03_outputs/03_sortmerna"
 CLEAN_DIR="${OUT_DIR}/clean_reads"
 RRNA_DIR="${OUT_DIR}/rRNA_reads"
+FAILED_DIR="${OUT_DIR}/FAILED_workdirs"
 
-mkdir -p "$CLEAN_DIR" "$RRNA_DIR"
+mkdir -p "$CLEAN_DIR" "$RRNA_DIR" "$FAILED_DIR"
 
-# Path to unpacked database directory / fasta files (UPDATE THIS PATH)
-DB_DIR="${BASE}/01_inputs/databases"
 # Database arguments (--ref db1.fasta --ref db2.fasta ...)
-DEFAULT="${BASE}/01_inputs/databases/smr_v4.3_default_db.fasta"
-CUSTOM="${BASE}/01_inputs/databases/species_rDNA.fasta"
+DEFAULT="$SCRATCH_BASE/01_inputs/databases/smr_v4.3_default_db.fasta"
+CUSTOM="$SCRATCH_BASE/01_inputs/databases/species_rDNA.fasta"
+
+# OPTIONAL: if you pre-built a shared index (see sortmerna_build_index.sb),
+# point to it here and pass --idx-dir below instead of rebuilding per task.
+# SHARED_IDX_DIR="$SCRATCH_BASE/01_inputs/databases/shared_idx"
 
 # 2. Environment Setup
+ml purge
+ml load Miniforge3
+conda activate sortmerna_run
 
 THREADS=${SLURM_CPUS_PER_TASK:-1}
 
+echo "=========================================================="
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $NEW_ID ($OLD_ID)"
+echo "Start time: $(date)"
+echo "=========================================================="
+
+run_sortmerna_and_check () {
+    # $1 = workdir, $2 = descriptive label for logging (pe/se)
+    local WORKDIR="$1"
+    local LABEL="$2"
+    shift 2
+
+    # --- Guard against stale/partial state from a previous failed attempt ---
+    # A prior run that was OOM-killed or hit walltime can leave behind a
+    # workdir with empty/partial index files. If SortMeRNA sees files already
+    # present at the expected index path, it may treat indexing as already
+    # done rather than rebuilding it. Always start from a clean directory.
+    if [ -d "$WORKDIR" ]; then
+        echo "WARNING: pre-existing workdir found at $WORKDIR - removing before this run to avoid stale/partial index reuse."
+        rm -rf "$WORKDIR"
+    fi
+    mkdir -p "$WORKDIR"
+
+    echo "Running SortMeRNA ($LABEL) for $NEW_ID..."
+    sortmerna "$@" --workdir "$WORKDIR" --threads "$THREADS"
+    local EXIT_CODE=$?
+
+    if [ $EXIT_CODE -ne 0 ]; then
+        echo "ERROR: sortmerna ($LABEL) exited with code $EXIT_CODE for $NEW_ID."
+        echo "Preserving workdir for debugging at: ${FAILED_DIR}/${NEW_ID}_${LABEL}_$(date +%s)"
+        mv "$WORKDIR" "${FAILED_DIR}/${NEW_ID}_${LABEL}_$(date +%s)"
+        return 1
+    fi
+
+    return 0
+}
+
+verify_log_complete () {
+    # $1 = path to the .log file sortmerna writes next to --aligned prefix
+    local LOGFILE="$1"
+    if [ ! -f "$LOGFILE" ]; then
+        echo "ERROR: expected log file not found: $LOGFILE"
+        return 1
+    fi
+    if ! grep -q "Total reads passing E-value threshold" "$LOGFILE"; then
+        echo "ERROR: log file $LOGFILE does not contain a completed summary block - run may have been truncated."
+        return 1
+    fi
+    echo "Log verified complete: $LOGFILE"
+    return 0
+}
+
+OVERALL_STATUS=0
 
 # 3. Process Paired-End Reads
 if [ -f "${IN_DIR}/${NEW_ID}_1_trim.fastq.gz" ] && [ -f "${IN_DIR}/${NEW_ID}_2_trim.fastq.gz" ]; then
-    echo "Running SortMeRNA on PAIRED-END reads for $NEW_ID..."
-    
-    WORKDIR="${OUT_DIR}/workdir_pe_${NEW_ID}"
-    mkdir -p "$WORKDIR"
 
-    singularity exec \
-      --bind "${BASE}:${BASE}" \
-      "$IMG" sortmerna \
-        --ref ${DEFAULT} \
-        --ref ${CUSTOM} \
+    WORKDIR="${OUT_DIR}/workdir_pe_${NEW_ID}"
+
+    if run_sortmerna_and_check "$WORKDIR" "pe" \
+        --ref "${DEFAULT}" \
+        --ref "${CUSTOM}" \
         --reads "${IN_DIR}/${NEW_ID}_1_trim.fastq.gz" \
         --reads "${IN_DIR}/${NEW_ID}_2_trim.fastq.gz" \
-        --workdir "$WORKDIR" \
         --aligned "${RRNA_DIR}/${NEW_ID}_pe_rRNA" \
         --other "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA" \
         --paired_in \
         --out2 \
-        --fastx \
-        --threads "$THREADS"
-
-    # Rename outputs to standard STAR-friendly fastq.gz names
-    mv "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_fwd.fq.gz" "${CLEAN_DIR}/${NEW_ID}_1_sortmerna.fastq.gz"
-    mv "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_rev.fq.gz" "${CLEAN_DIR}/${NEW_ID}_2_sortmerna.fastq.gz"
-
-    # Clean up heavy temporary index/workdir files
-    rm -rf "$WORKDIR"
+        --fastx
+    then
+        if verify_log_complete "${RRNA_DIR}/${NEW_ID}_pe_rRNA.log"; then
+            # Confirm the renamed output files actually exist and are non-empty
+            # before declaring success and deleting the workdir.
+            if [ -s "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_fwd.fq.gz" ] && [ -s "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_rev.fq.gz" ]; then
+                mv "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_fwd.fq.gz" "${CLEAN_DIR}/${NEW_ID}_1_sortmerna.fastq.gz"
+                mv "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_rev.fq.gz" "${CLEAN_DIR}/${NEW_ID}_2_sortmerna.fastq.gz"
+                echo "PE clean reads written for $NEW_ID."
+                rm -rf "$WORKDIR"
+            else
+                echo "ERROR: expected clean-read output files missing or empty for $NEW_ID (PE). Preserving workdir."
+                mv "$WORKDIR" "${FAILED_DIR}/${NEW_ID}_pe_missingoutput_$(date +%s)"
+                OVERALL_STATUS=1
+            fi
+        else
+            OVERALL_STATUS=1
+        fi
+    else
+        OVERALL_STATUS=1
+    fi
 fi
 
 # 4. Process Single-End Reads
 if [ -f "${IN_DIR}/${NEW_ID}_singles_trim.fastq.gz" ]; then
-    echo "Running SortMeRNA on SINGLE-END reads for $NEW_ID..."
 
     WORKDIR="${OUT_DIR}/workdir_se_${NEW_ID}"
-    mkdir -p "$WORKDIR"
 
-    singularity exec \
-      --bind "${BASE}:${BASE}" \
-      "$IMG" sortmerna \
-        --ref ${DEFAULT} \
-        --ref ${CUSTOM} \
+    if run_sortmerna_and_check "$WORKDIR" "se" \
+        --ref "${DEFAULT}" \
+        --ref "${CUSTOM}" \
         --reads "${IN_DIR}/${NEW_ID}_singles_trim.fastq.gz" \
-        --workdir "$WORKDIR" \
         --aligned "${RRNA_DIR}/${NEW_ID}_se_rRNA" \
         --other "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA" \
-        --fastx \
-        --threads "$THREADS"
-
-    # Rename single output to standard fastq.gz
-    mv "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA.fq.gz" "${CLEAN_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz"
-
-    # Clean up heavy temporary index/workdir files
-    rm -rf "$WORKDIR"
+        --fastx
+    then
+        if verify_log_complete "${RRNA_DIR}/${NEW_ID}_se_rRNA.log"; then
+            if [ -s "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA.fq.gz" ]; then
+                mv "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA.fq.gz" "${CLEAN_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz"
+                echo "SE clean reads written for $NEW_ID."
+                rm -rf "$WORKDIR"
+            else
+                echo "ERROR: expected clean-read output file missing or empty for $NEW_ID (SE). Preserving workdir."
+                mv "$WORKDIR" "${FAILED_DIR}/${NEW_ID}_se_missingoutput_$(date +%s)"
+                OVERALL_STATUS=1
+            fi
+        else
+            OVERALL_STATUS=1
+        fi
+    else
+        OVERALL_STATUS=1
+    fi
 fi
 
-echo "SortMeRNA filtering completed for $NEW_ID."
+echo "=========================================================="
+echo "End time: $(date)"
+if [ $OVERALL_STATUS -eq 0 ]; then
+    echo "SortMeRNA filtering completed successfully for $NEW_ID."
+else
+    echo "SortMeRNA filtering completed WITH ERRORS for $NEW_ID. Check ${FAILED_DIR} for preserved debug workdirs."
+fi
+echo "=========================================================="
+
+exit $OVERALL_STATUS
