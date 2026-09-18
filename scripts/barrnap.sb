@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=00:30:00 # barrnap runs pretty quick
-#SBATCH --output=/path/to/working/dir/logs/sortmerna/%x_%j.out # change this to relect your working directory
+#SBATCH --output=/path/to/working/dir/logs/sortmerna/%x_%j.out # change this to reflect your working directory
 
 set -euo pipefail
 
@@ -14,6 +14,11 @@ set -euo pipefail
 BASE="/path/to/working/dir" # also change this to reflect your working directory
 SIF="${BASE}/images/sortmerna.sif"
 GENOME="${BASE}/01_inputs/species.chromosomes.fa" # make sure this mathces the genome file
+
+# This must be the SAME default SortMeRNA database file that sortmerna.sb points
+# its DEFAULT variable at - the index built below is only valid for this exact
+# pair of reference files, in this exact order.
+DEFAULT_DB="${BASE}/01_inputs/databases/smr_v4.3_default_db.fasta"
 
 KINGDOMS=(bac euk mito) # this runs all three models to capture nuclear, mitochondrial, and chloroplast rRNA genes
 
@@ -90,20 +95,37 @@ cd-hit-est \
 ml purge
 
 # ----------------------------------------------------------------------------
-# STEP 4: Index the custom database with SortMeRNA
+# STEP 4: Build ONE shared index covering BOTH the default db and the custom
+# db together, since that is how sortmerna.sb actually calls SortMeRNA
+# (--ref DEFAULT --ref CUSTOM). An index built from CUSTOM_DB alone is not
+# valid for that combined call - SortMeRNA hashes/validates the index against
+# the exact set of --ref files (and their order) passed at runtime.
 # ----------------------------------------------------------------------------
 
-echo "[$(date)] Indexing custom rRNA database for SortMeRNA"
+echo "[$(date)] Indexing default + custom rRNA databases together for SortMeRNA"
 mkdir -p "${INDEX_DIR}"
 
-singularity exec -B "${OUTDIR}:${OUTDIR}" "${SIF}" \
+if [ ! -f "${DEFAULT_DB}" ]; then
+    echo "ERROR: DEFAULT_DB not found at ${DEFAULT_DB}. Set this to the same" >&2
+    echo "       file sortmerna.sb's DEFAULT variable points to before indexing." >&2
+    exit 1
+fi
+
+singularity exec -B "${OUTDIR}:${OUTDIR}" -B "$(dirname "${DEFAULT_DB}"):$(dirname "${DEFAULT_DB}")" "${SIF}" \
     sortmerna \
+        --ref "${DEFAULT_DB}" \
         --ref "${CUSTOM_DB}" \
         --idx-dir "${INDEX_DIR}" \
         --index 1 \
         --task 5 \
         --threads "${THREADS}"
 
-echo "[$(date)] Done. Indexed database available at:"
-echo "  FASTA: ${CUSTOM_DB}"
+echo "[$(date)] Done. Shared index built for:"
+echo "  Ref 1 (default): ${DEFAULT_DB}"
+echo "  Ref 2 (custom):  ${CUSTOM_DB}"
 echo "  Index directory: ${INDEX_DIR}"
+echo ""
+echo "In sortmerna.sb, point CUSTOM at this exact CUSTOM_DB path, set"
+echo "SHARED_IDX_DIR to this exact INDEX_DIR path, and pass both"
+echo "--idx-dir \"\$SHARED_IDX_DIR\" and --index 0 on every sortmerna call so it"
+echo "reuses this index instead of rebuilding it per array task."
