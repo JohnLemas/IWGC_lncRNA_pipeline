@@ -1,14 +1,16 @@
 #!/bin/bash --login
 #SBATCH --job-name=species_sortmerna
-#SBATCH --array=1-23
+#SBATCH --array=1-[number of samples from wc -l species_metadata.txt]
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=48G
 #SBATCH --time=16:00:00
 #SBATCH --output=/path/to/project/dir/logs/sortmerna/%x-%A_%a.SLURMout
 
-# NOTE ON RESOURCES: bumped mem 32G->48G and time 12h->16h as a safety margin.
-# If you build a shared index first (see sortmerna_build_index.sb), you can drop
-# these back down since each task will only be aligning, not indexing.
+# NOTE ON RESOURCES: mem/time here were sized to cover per-task indexing.
+# Now that this script uses the shared index built by barrnap.sb (--idx-dir,
+# --index 0 below), each task only aligns - it doesn't rebuild the index - so
+# you can likely lower --mem and --time once you've confirmed a couple of
+# tasks run cleanly under the new setup.
 
 set -uo pipefail
 # Not using -e globally: the paired/single-end blocks are conditional on file
@@ -31,18 +33,24 @@ FAILED_DIR="${OUT_DIR}/FAILED_workdirs"
 
 mkdir -p "$CLEAN_DIR" "$RRNA_DIR" "$FAILED_DIR"
 
+# Container image - same one barrnap.sb uses, so indexing and alignment run
+# against the identical SortMeRNA build/version.
+SIF="$SCRATCH_BASE/images/sortmerna.sif"
+
 # Database arguments (--ref db1.fasta --ref db2.fasta ...)
 DEFAULT="$SCRATCH_BASE/01_inputs/databases/smr_v4.3_default_db.fasta"
-CUSTOM="$SCRATCH_BASE/01_inputs/databases/species_rDNA.fasta"
+CUSTOM="$SCRATCH_BASE/01_inputs/databases/custom_db.fasta"
 
-# OPTIONAL: if you pre-built a shared index (see sortmerna_build_index.sb),
-# point to it here and pass --idx-dir below instead of rebuilding per task.
-# SHARED_IDX_DIR="$SCRATCH_BASE/01_inputs/databases/shared_idx"
+# Shared index built once by barrnap.sb (Step 4) covering BOTH DEFAULT and
+# CUSTOM above, in that order. Must match barrnap.sb's INDEX_DIR exactly, and
+# DEFAULT/CUSTOM above must match barrnap.sb's DEFAULT_DB/CUSTOM_DB exactly -
+# SortMeRNA validates the index against the specific ref files/order given.
+SHARED_IDX_DIR="$SCRATCH_BASE/01_inputs/databases/species_barrnap/idx"
 
 # 2. Environment Setup
+# No conda env needed - sortmerna now runs from the same Singularity image
+# barrnap.sb uses (see SIF above), so no module/env loading step for it here.
 ml purge
-ml load Miniforge3
-conda activate sortmerna_run
 
 THREADS=${SLURM_CPUS_PER_TASK:-1}
 
@@ -69,7 +77,8 @@ run_sortmerna_and_check () {
     mkdir -p "$WORKDIR"
 
     echo "Running SortMeRNA ($LABEL) for $NEW_ID..."
-    sortmerna "$@" --workdir "$WORKDIR" --threads "$THREADS"
+    singularity exec -B "${SCRATCH_BASE}:${SCRATCH_BASE}" "${SIF}" \
+        sortmerna "$@" --workdir "$WORKDIR" --threads "$THREADS"
     local EXIT_CODE=$?
 
     if [ $EXIT_CODE -ne 0 ]; then
@@ -107,6 +116,8 @@ if [ -f "${IN_DIR}/${NEW_ID}_1_trim.fastq.gz" ] && [ -f "${IN_DIR}/${NEW_ID}_2_t
     if run_sortmerna_and_check "$WORKDIR" "pe" \
         --ref "${DEFAULT}" \
         --ref "${CUSTOM}" \
+        --idx-dir "${SHARED_IDX_DIR}" \
+        --index 0 \
         --reads "${IN_DIR}/${NEW_ID}_1_trim.fastq.gz" \
         --reads "${IN_DIR}/${NEW_ID}_2_trim.fastq.gz" \
         --aligned "${RRNA_DIR}/${NEW_ID}_pe_rRNA" \
@@ -144,6 +155,8 @@ if [ -f "${IN_DIR}/${NEW_ID}_singles_trim.fastq.gz" ]; then
     if run_sortmerna_and_check "$WORKDIR" "se" \
         --ref "${DEFAULT}" \
         --ref "${CUSTOM}" \
+        --idx-dir "${SHARED_IDX_DIR}" \
+        --index 0 \
         --reads "${IN_DIR}/${NEW_ID}_singles_trim.fastq.gz" \
         --aligned "${RRNA_DIR}/${NEW_ID}_se_rRNA" \
         --other "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA" \
