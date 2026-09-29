@@ -4,18 +4,29 @@
 ---
 This directory contains all scripts used to predict and verify lncRNAs in a given species. Scripts can be copied into a species' sub-directory for editing.
 ```bash
-# use a wild card to correct file paths and file names quickly for each sbatch script. Example:
-cp IWGC_lncRNA_pipeline/scripts/* IWGC_lncRNA_pipeline/A.thaliana/02_scripts
-sed -i 's/species/A.thaliana/g' IWGC_lncRNA_pipeline/A.thaliana/02_scripts/*
+# 1. Clone the main repo
+git clone https://github.com/JohnLemas/IWGC_lncRNA_pipeline.git
+
+# 2. Create the base working directory
+mkdir A.thaliana
+
+# 3. Create the pipeline directories
+mkdir A.thaliana/01_inputs A.thaliana/02_scripts A.thaliana/03_outputs
+
+# 4. Copy the basic scritps into the working directory
+cp IWGC_lncRNA_pipeline/scripts/* A.thaliana/02_scripts
+
+# 5. Insert your species prefix identifier into all of the SLURM scripts
+sed -i 's/species/A.thaliana/g' A.thaliana/02_scripts/*sb
+
+# 6. Update the $BASE file path for each script and verify species prefix
 ```
 ---
 ### Contents
 - [Alignment array](#alignment-array)
   - Array `SLURM` job that uses an sra list to align trimmed `fastq` files
-- [Bam indexing](#bam-indexing)
-  - Array `SLURM` job to index `bam` files
-- [CD-HIT](#cd-hit)
-  - removes duplicate sequences from truth dataset
+- [BARRNAP](#barrnap)
+  - Builds a custom rRNA database from the input genome
 - [CPAT plant](#cpat-plant)
   - Logistic regression Ml tool for lncRNA prediction
 - [DIAMOND](#diamond)
@@ -26,24 +37,25 @@ sed -i 's/species/A.thaliana/g' IWGC_lncRNA_pipeline/A.thaliana/02_scripts/*
 - [FEELnc](#feelnc)
   - Filter: decision tree ensemble ML tool for lncRNA candidate identification
   - Classifier: edits gtf entries for predicted lncRNAs to include classifications
-- [Intersect IDs](#intersect-ids)
-  - Custom R script and sbatch script to combine outputs from up to four Ml tools and from DIAMOND
+- [Intersect-classify](#intersect-classify)
+  - Final step in the pipeline
+  - Runs R scripts and FEELnc_classify through the rbio_tools and FEELnc images to annotate predictions.
 - [lncBoost](#lncboost)
   -  XGBoost model - iterative ML 'gradient boosting' model
 - [lncFinder](#lncfinder)
   - support vector machine (SVM) geometric Ml tool - good for finding patterns in nonlinear data
   - image, r script, and sbatch script for this step
-- [Minimap2](#minimap2)
-  - mapping predictions against truth sequences for pipeline analysis
-- [NCBI datasets](#ncbi-datasets)
-  - clean up `datasets` reference assembly and annotation files for use in the pipeline
-- [Prefetch array](#prefetch-array)
-  - uses sra accessions list to run `prefetch` and `fasterq-dump` as an array
+- [QC](#qc)
+  - Runs `FastQC` and `MultiQC` on raw input files, `Fastp` trimmed files, and `SortMeRNA` cleaned files
+- [SortMeRNA](#sortmerna)
+  - Filters out rRNA contamination in input raw reads
 - [Genome generate](#genome-generate)
-  - Indexes the reference genome
+  - Indexes the reference genome for STAR read alignment
 - [Stringtie](#stringtie)
-  - Assemble: creates gtf for each fastq file
-  - Merge: merges individual gtf files into one *de novo* transcriptome for the species
+  - Creates gtf for each fastq file and merges individual gtf files into one *de novo* transcriptome for the species
+- [Track Predictions](#track-predictions)
+  - Uses metadata to assign tissue type specificity to each predicted lncRNA
+  - Can be run directly after StringTie on the entire candidate set
 ---
 ### Alignment array
 INPUTS
@@ -85,42 +97,30 @@ SLURM NOTES
 - time=07:00:00
   - based on 160 sra accessions
 ---
-### Bam indexing
+### BARRNAP
 INPUTS
-- STAR indexed genome
-- trimmed reads
-- SRA accession list
+- reference genome assembly
 
 COMMAND
 ```bash
-samtools index ${OUT_DIR}/${ID}_Aligned.sortedByCoord.out.bam
-```
-
-NOTES
-- very light on resources
-  - 1 cpu, 4 G, 1 hour
----
-### CD-HIT
-INPUTS
-- the combined list of all sequences in the 'truth' dataset
-
-COMMAND
-```bash
-cd-hit -i ${INPUT} -o ${OUTPUT} -c 0.9 -M 800 -T 8 -l 200
+barrnap \
+    --kingdom "${kingdom}" \
+    --threads "${THREADS}" \
+    --outseq "${out_fasta}" \
+    "${GENOME}" \
+    > "${OUTDIR}/${name}_${kingdom}_rrna.gff"
 ```
 FLAGS
-- -c
-  - sequence identity threshold, default 0.9
-- -M
-  - memory limit (in MB) for the program, default 800; 0 for unlimitted
-- -T
-  - number of threads, default 1; with 0, all CPUs will be used
-- -l
-  - length of throw_away_sequences, default 10
+- --kingdom
+  - barrnap database selection (euk, bac, mito)
+- --threads
+  - barrnap runs pretty efficiantly. 8 is enough for most genomes
+- --outseq
+  - rRNA fasta file with matches to the kingdom database
 
 NOTES
 - very fast
-  - 8 cpu, 1 G and 2 hours
+  - 8 cpu, 16 G and 30 min for G. max
 ---
 ### CPAT plant
 Model: Logistic regression
@@ -246,8 +246,25 @@ SLURM NOTES
 - 20 cpus-per-task
 - 4 hours for the 98,984 soy candidates
 ---
-### Intersect IDs
-Two scripts for this step: `intersect_ids.R` & `intersect_ids.sb`. The R script outputs a list of high confidence lncRNA IDs from `StringTie` and a table of concensus information for every submitted candidate.
+### Intersect-classify
+Multiple steps for this script:
+1. Intersect IDs
+  - Intersects predicted lncRNA IDs from the four tools
+  - Calls `intersect_ids.r` in the `rbio_tools` image
+2. Pull seqs and gtf
+  - Outputs final predicted lncRNAs in `fasta` and `gtf` format
+3. Classify lncRNA predictions
+  - runs `FEELnc_classifier.pl` through the `FEELnc` image
+  - Calls `classifications.r` in the `rbio_tools` image
+4. Intersect TEs
+  - Intersects predictions with annotated TEs
+  - Calls `intersect_lncRNA_TE.r` in the `rbio_tools` image
+5. Finalize annotation
+  - Builds the tsv file with classifications and TE information
+    - Calls `build_final_annotation.r` in the `rbio_tools` image
+6. Add tissue type information
+  - Adds tissue specificity column to annotation file
+  - Calls `add_tissue_annotation.r` in the `rbio_tools` image
 
 INPUTS \
 Designed to accept at least two outputs from any of the four tools. Fewer pipeline tools from the entire ensemble can be run if desired, or if a tool/model is not working. 
@@ -260,11 +277,19 @@ Designed to accept at least two outputs from any of the four tools. Fewer pipeli
 - `DIAMOND` output in `tsv` format
 - output file prefix
   - default is `concensus`
+- TE annotations
+- Tracking summary from `track_preds.sb`
 
 
 COMMAND
 ```bash
-singularity run $IMAGE -f $FEELnc -c $CPAT -l $lncFinder -b $lncBoost -d $DIAMOND -o $OUTPFX
+singularity run $IMAGE \
+-f $FEELnc \
+-c $CPAT \
+-l $lncFinder \
+-b $lncBoost \
+-d $DIAMOND \
+-o $OUTPFX
 ```
 FLAGS
 
@@ -341,150 +366,120 @@ Model: support vector machine (SVM)
 - attempts to find the hyperplane (perfect boundary line) that creates the widest possible gap between the coding dots and noncoding dots
 - good at finding patterns in nonlinear data
 
-SIDE NOTE! different than other models. download from CRAN repo and run it through R
+SIDE NOTE! different than other models. Run it with the rbio_tools image
 - The authors of Plant-LncPipe have an R script in the Scripts directory that runs lncFinder
-- I didn't like it so Gemini and I rewrote it to work with the custom lncFinder.sif image I wanted to use
-- much easier in hpcc not to have to deal with packages and paths and crap (as I quickly discovered)
+- I didn't like it so Gemini and I rewrote it to work with the custom rbio_tools image I wanted to use
 - also, as I eventually discovered through much agony, the model that the Plant-LncPipe authors provide for lncFinder is broken/disfunctional
 - luckily, lncFinder has a built in model that was trained on wheat data. use this model instead
+- This script call viennaRNA to fold each candidate. All of the dependancies are built into rbio_tools
 	
 INPUTS:
-1. input fasta sequences
+1. candidate fasta sequences
 2. path to output csv file
 
-PROCESS:
-- edit the file paths in the lncFinder.R script before running the image command
-  - maybe I should change this so that running the singularity command will feed R the fasta seqs and output path
-
 COMMAND (in the R script):
-```{r}
-results <- lnc_finder(
-  Seqs, 
-  SS.features = FALSE, 
-  format = "DNA", 
-  frequencies.file = "wheat", 
-  svm.model = "wheat", 
-  parallel.cores = 32
-)
-```
-
-FLAGS:
-- Seqs
-  - input fasta file
-- SS.features = FALSE
-  - lncFinder can predict lncRNAs after folding! only considers base pairs available for sequence interactions 
-  - potentially more accurate, but way more computationally expensive
-  - set to TRUE to have lncFinder pass the folding command onto another package
-	folding uses the ViennaRNA package (RNAfold)
-    - not in the image at this point! I'd have to edit the lncFinder.sif image to include ViennaRNA
-    - it took ~24 hours just to fold all of the 156,364 corn candidates when I tried to use this
-  - I need to rerun this step with the folded sequences that I generated to see if it works and compare results
-- format = "DNA"
-  - denotes fasta sequences
-  - use "SS" if using already folded secondary structures
-    - if SS.features = TRUE doesn't work well (i had some issues) run the Vienna package directly
-    - use these as input instead of fasta seqs and set format to "SS"
-- frequencies.file = "wheat"
-  - the built-in wheat frequencies
-- svm.model = "wheat"
-  - the built-in wheat model
-- parallel.cores = 32
-  - uses parallel package (present in image) to utilize parallel threading
-  - make sure this matches what is set in #SBATCH --cpus-per-task for SLURM
-
-COMMAND (for the image itself)
 ```bash
-singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
-    Rscript $RSCRIPT
-```
-FLAGS:
-- IMAGE
-  - path to lncFinder.sif
-- RSCRIPT
-  - path to edited R script
+singularity run \
+    --bind /mnt/scratch/lemasjoh \
+    "$IMAGE" lnc_predict \
+    --fasta "$INPUT_FASTA" \
+    --out "$OUTPUT_CSV" \
+    --cores "$SLURM_CPUS_PER_TASK" \
+    --model "$MODEL_TYPE"
 
-SLURM NOTES
+```
+
+FLAGS:
+- --bind
+  - bind the path to the project root
+- --fasta
+  - candidate sequences in fasta format
+- --out
+  - output directory path with file name
+- --cores
+  - resource allocation
+- --model
+  - Passes the selected model type to `lncFinder()`
+  - use 'wheat' for all plant species- the only others are human and mouse
+
+NOTES
+- Baking the R scripts into rbio_tools makes these runs much easier. Singularity passes these variables directly to the R script eliminating the need to change file paths within the R script itself.
 - 32 cpus-per-task
 - 64 G
-- 1 hour
-  - HUGE NOTE: if having lncFinder fold seqs you'll need WAY more time
+- 12 hours
+  - HUGE NOTE: folding cnadidate sequences takes a lot of time
+  - tried separating these tasks but `lncFinder()` is really picky about folded input format
+
 ---
-### Minimap2
+### QC
 INPUTS
-- Predicted lncRNA sequences
-- condensed 'truth' dataset sequences
-- Output file pash
+- Raw fastq samples from sequencing facility
+- Trimmed fastq samples from `fastp.sb`
+- Clean fastq output from `sortmerna.sb`
 
 COMMAND
 ```bash
-minimap2 -x cdna -t 8 $TRUTH $PRED -o $OUT_FILE
+# General fasp command (not needed for trimmed reads)
+ml load FastQC
+fastqc -t 8 -o "${OUT_RAW}" "${IN_RAW}"/*.gz
+
+# General multiqc command
+ml load MultiQC
+multiqc "${OUT_RAW}" -n "raw_report" -o "${OUT_RAW}" --no-data-dir
 ```
 FLAGS
-- -x
-  - sets the input sequence type
-
+- -n
+  - prefix for the report file
+- -o
+  - output directory
+- --no-data-dir
+  - skips the default data directory output
 NOTES
-Super fast! 32 G, 8 threads, 30 minutes
----
-### NCBI datasets
+This step is used to track not only sequence quality but also library prep via ribosomal depletion. SortMeRNA has strict matching thresholds, so read libraries in the `clean_reads` directory will generall drop significantly if ribosomal depletion was not effective.
+### SortMeRNA
 INPUTS
-- unzipped `ncbi_dataset` directory
-- species designation (ie z.mays)
+- `barrnap` custom rDNA library and default SortMeRNA database
+- trimmed reads from pastp
 
 COMMAND
 ```bash
-# Unzip the dataset
-unzip ncbi_dataset.zip
-
-# Move into the uncompressed directory and run the cleanup script
-cd ncbi_dataset
-python3 IWGC_lncRNA_pipeline/scripts/ncbi_datasets_cleanup.py [species]
-
-# Move the new clean assembly and annotation files into the inputs directory
-mv species.chromosomes.fa IWGC_lncRNA_pipeline/species/01_inputs/
-mv species_mRNA.gtf IWGC_lncRNA_pipeline/species/01_inputs/
+sortmerna \
+     --ref ${DEFAULT} \
+     --ref ${CUSTOM} \
+     --reads "${IN_DIR}/${NEW_ID}_1_trim.fastq.gz" \
+     --reads "${IN_DIR}/${NEW_ID}_2_trim.fastq.gz" \
+     --workdir "$WORKDIR" \
+     --aligned "${RRNA_DIR}/${NEW_ID}_pe_rRNA" \
+     --other "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA" \
+     --paired_in \
+     --out2 \
+     --fastx \
+     --threads "$THREADS"
 ```
 
----
-### Prefetch array
-INPUTS
-- List of SRA accessions
-- output directory
-
-COMMAND
-``` bash
-# 1. Run Prefetch (only if not already downloaded)
-prefetch $ID
-
-# 2. Run fasterq-dump
-echo "Starting fasterq-dump for $ID..."
-fasterq-dump $ID \
-    --outdir $OUTDIR \
-    --split-files \
-    --skip-technical \
-    --threads $SLURM_CPUS_PER_TASK \
-    --temp /tmp
-
-# 3. Gzip the results
-if [ $? -eq 0 ]; then
-    echo "Conversion complete. Compressing files..."
-    gzip $OUTDIR/${ID}*.fastq
-
-else
-    echo "fasterq-dump failed for $ID"
-    exit 1
-fi
-
-```
 FLAGS
-- -skip-technical
-  - only keep biological reads
-- -split-files
-  - 
-
+- --ref
+  - Path to the database for the run. Can use multiple databases via duplicate calls
+- --reads
+  - Path to trimmed fastq files
+- --workdir
+  - Path for SortMeRNA temporary working directories. One directory is generated for each sample.
+- --aligned
+  - File prefix for reads that match the rRNA database(s)
+- --other
+  - File prefix for reads that did not match the database(s)
+- --paired_in
+  - Include for paired end reads
+- --out2
+  - maintain paired-end read format in output files instead of collapsing them
+- --fastx
+  - output the same file format as input (fasta or fastq) instead of alignment files
+- --threads
+  - parallel cores to use
 NOTES
-
----
+- This is the longest step in the pipeline next to `lncFinder`
+- rRNA contamination is the biggest hurdle we have to navigate with lncRNA prediction
+- The combination of barrnap and sortmeRNA should handle most of the rRNA filtering, but downstream predictions should be scrutinized accordingly
 ### Genome generate
 INPUTS
 - Reference genome
@@ -516,21 +511,50 @@ NOTES
 ### Stringtie
 stringtie transcriptome assembly and lncRNA candidate discovery
 
-two steps: assemble and merge.
+1. `stringtie_assemble.sb` \
+INPUTS
+- metadata file
+- STAR bam files
+- reference `GTF` 
 
-assemble creates a gtf for each individual fastq file (also helpful to use an array job; see stringtie_assemble.sb) \
-merge creates a single consolidated gtf file with input from each individual gtf. useful to make an array to loop over so that all the files get added to the path (see stringtie_merge.sb)
-
-Once the merge step is complete the output file is a gtf file with all of the locations of aligned sequences and theyre associated annotations (assuming there is a match in the reference genome)
-
-To obtain candidate lncRNAs, we grep for all of the aligned sequences/locations that did not overlap already annotated protein coding regions:
+COMMAND
 ```bash
-# grep for novel transcript alignments (maybe not necessarily novel, just not in the given reference)
-grep 'transcript_id "MSTRG' merge.gtf > candidates.gtf
-# write out the sequences for each novel transcript
-gffread -w candidates.fasta -g genome.fasta candidates.gtf
-# create a list with novel alignment IDs for use later
-grep '>' candidates.fasta | sed 's/>//g' | sort -u > candidates.txt
+stringtie \
+    ${BAM_DIR}/${ID}_Aligned.sortedByCoord.out.bam \
+    -G $REF_GTF \
+    -p $SLURM_CPUS_PER_TASK \
+    -m 200 \
+    -j 2 \
+    -o ${OUT_DIR}/${ID}_assembled.gtf"
 ```
-These three steps set up the pipeline and result in the unfiltered files used as inputs for each model
+FLAGS
+- -G
+  - reference GTF file
+- -p
+  - threads
+- -m
+  - minimum length threshold
+- -j
+  - Minimum junction coverage (higher = fewer false positives)
+- -o
+  - output file
+2. `stringtie_merge.sb` \
+INPUTS
+- species metadata file
+- assembled gtf files
+- reference `GTF` and `FASTA` files
+- output file paths
+COMMAND
+```bash
+# Run the merge command
+stringtie --merge -G $REF_GTF -m 200 -o $OUT_GTF ${gtf_filePath[*]}
+
+# Extract the transcript sequences from the master GTF file
+grep 'transcript_id "MSTRG' $OUT_GTF > $CAN_GTF
+gffread -w $SEQ_OUT -g $GENOME $CAN_GTF
+```
+NOTES
+- assembly runs as an array job using the metadata to build the array
+- merge combines *de novo* transcriptome assembly and candidate feature extraction
+- outputs candidate lncRNA files used for all prediction tools
 ---
