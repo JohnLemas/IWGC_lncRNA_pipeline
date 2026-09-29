@@ -9,13 +9,12 @@
 
 # 1. Paths
 BASE="/path/to/working/dir" # change this to reflect your working directory
-ID_FILE="$( cut -f 2 {BASE}/01_inputs/species_metadata.txt )"
 GTF_DIR="${BASE}/03_outputs/04_stringtie/sample_assemblies"
 REF_GTF="${BASE}/01_inputs/species_mRNA.gtf"
 OUT_GTF="${BASE}/03_outputs/04_stringtie/species_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array
-mapfile -t SAMPLE_IDS < "$ID_FILE"
+mapfile -t SAMPLE_IDS < <(cut -f 3 "${BASE}/g.max/01_inputs/g.max_metadata.txt")
 
 # Create the list of GTF file paths
 gtf_filePath=()
