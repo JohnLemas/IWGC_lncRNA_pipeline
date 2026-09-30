@@ -73,23 +73,31 @@ if [ -f "$PE_BAM" ] && [ -f "$SE_BAM" ]; then
     echo "Merging PE and SE BAM files into $FINAL_BAM..."
     samtools merge -@ "$THREADS" -o "$FINAL_BAM" "$PE_BAM" "$SE_BAM"
     samtools index -@ "$THREADS" "$FINAL_BAM"
-    mv "$TMP_DIR"/*final.out $OUT_DIR
-    rm -rf "$TMP_DIR"
 elif [ -f "$PE_BAM" ]; then
     echo "Moving PE BAM to final destination..."
     mv "$PE_BAM" "$FINAL_BAM"
     samtools index -@ "$THREADS" "$FINAL_BAM"
-    mv "$TMP_DIR"/*final.out $OUT_DIR
-    rm -rf "$TMP_DIR"
 elif [ -f "$SE_BAM" ]; then
     echo "Moving SE BAM to final destination..."
     mv "$SE_BAM" "$FINAL_BAM"
     samtools index -@ "$THREADS" "$FINAL_BAM"
-    mv "$TMP_DIR"/*final.out $OUT_DIR
-    rm -rf "$TMP_DIR"
 else
     echo "ERROR: No BAM files generated for $NEW_ID in $TMP_DIR"
     exit 1
 fi
+
+# Move and rename STAR final log files with sample ID
+for logfile in "${TMP_DIR}"/*Log.final.out; do
+    if [ -f "$logfile" ]; then
+        # Extracts 'pe' or 'se' prefix from the filename
+        prefix=$(basename "$logfile" | cut -d'_' -f1)
+        
+        # Output format: ${NEW_ID}_pe_Log.final.out or ${NEW_ID}_se_Log.final.out
+        mv "$logfile" "${OUT_DIR}/${NEW_ID}_${prefix}_Log.final.out"
+    fi
+done
+
+# Clean up temp directory
+rm -rf "$TMP_DIR"
 
 echo "STAR Alignment for $NEW_ID complete."
