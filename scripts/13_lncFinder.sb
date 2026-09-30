@@ -3,14 +3,19 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
 #SBATCH --time=12:00:00
-#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+
+set -euo pipefail
 
 # Paths
 BASE="/path/to/working/dir" # change this to reflect your working directory
+SPEC="species"
 IMAGE="${BASE}/images/rbio_tools.sif"
-OUTPUT_DIR="${BASE}/03_outputs/08_lncFinder"
-INPUT_FASTA="${BASE}/03_outputs/04_stringtie/species_candidates.fasta"
-OUTPUT_CSV="${OUTPUT_DIR}/species_lncFinder_results.csv"
+
+# Inputs
+OUTPUT_DIR="${BASE}/${SPEC}/03_outputs/08_lncFinder"
+INPUT_FASTA="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
+OUTPUT_CSV="${OUTPUT_DIR}/${SPEC}_lncFinder_results.csv"
 
 mkdir -p ${OUTPUT_DIR}
 

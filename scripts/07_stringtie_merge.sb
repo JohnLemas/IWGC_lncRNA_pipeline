@@ -3,18 +3,21 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
-#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
 
 # ========>-------- Merge assembled GTF files from StringTie into a master GTF file --------<======== #
 
 # 1. Paths
 BASE="/path/to/working/dir" # change this to reflect your working directory
-GTF_DIR="${BASE}/03_outputs/04_stringtie/sample_assemblies"
-REF_GTF="${BASE}/01_inputs/species_mRNA.gtf"
-OUT_GTF="${BASE}/03_outputs/04_stringtie/species_denovo_trans.gtf"
+SPEC="species"
+
+# Inputs
+GTF_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/sample_assemblies"
+REF_GTF="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
+OUT_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array
-mapfile -t SAMPLE_IDS < <(cut -f 3 "${BASE}/g.max/01_inputs/g.max_metadata.txt")
+mapfile -t SAMPLE_IDS < <(cut -f 3 "${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt")
 
 # Create the list of GTF file paths
 gtf_filePath=()

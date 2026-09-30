@@ -1,9 +1,9 @@
 #!/bin/bash --login
-#SBATCH --job-name=barrnap_custom_db
+#SBATCH --job-name=custom_db
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=00:30:00 # barrnap runs pretty quick
-#SBATCH --output=/path/to/working/dir/logs/sortmerna/%x_%j.out # change this to reflect your working directory
+#SBATCH --output=/path/to/working/dir/species/logs/sortmerna/%x_%j.out # change this to reflect your working directory
 
 set -euo pipefail
 
@@ -12,17 +12,18 @@ set -euo pipefail
 # ----------------------------------------------------------------------------
 
 BASE="/path/to/working/dir" # also change this to reflect your working directory
+SPEC="species" # Set this to the species prefix for working directories and output files (ex: AmaTu=Amaranthus tuberculatus)
 SIF="${BASE}/images/sortmerna.sif"
-GENOME="${BASE}/01_inputs/species.chromosomes.fa" # make sure this mathces the genome file
+GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa" # make sure this mathces the genome file
 
 # This must be the SAME default SortMeRNA database file that sortmerna.sb points
 # its DEFAULT variable at - the index built below is only valid for this exact
 # pair of reference files, in this exact order.
-DEFAULT_DB="${BASE}/01_inputs/databases/smr_v4.3_default_db.fasta"
+DEFAULT_DB="${BASE}/databases/smr_v4.3_default_db.fasta"
 
 KINGDOMS=(bac euk mito) # this runs all three models to capture nuclear, mitochondrial, and chloroplast rRNA genes
 
-OUTDIR="${BASE}/01_inputs/databases/species_barrnap"
+OUTDIR="${BASE}/databases/${SPEC}_barrnap"
 mkdir -p "${OUTDIR}"
 
 THREADS=${SLURM_CPUS_PER_TASK:-8}

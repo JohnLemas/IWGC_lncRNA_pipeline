@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=48G
 #SBATCH --time=16:00:00
-#SBATCH --output=/path/to/project/dir/logs/sortmerna/%x-%A_%a.SLURMout
+#SBATCH --output=/path/to/project/dir/species/logs/sortmerna/%x-%A_%a.SLURMout
 
 # NOTE ON RESOURCES: mem/time here were sized to cover per-task indexing.
 # Now that this script uses the shared index built by barrnap.sb (--idx-dir,
@@ -18,15 +18,16 @@ set -uo pipefail
 # rather than having the whole script die on an unrelated test failure.
 
 # 1. Paths & Variables
-SCRATCH_BASE="/path/to/project/dir"
-LIST="$SCRATCH_BASE/01_inputs/species_metadata.txt"
+BASE="/path/to/project/dir"
+SPEC="species"
+LIST="$BASE/${SPEC}/01_inputs/${SPEC}_metadata.txt"
 
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r')
 OLD_ID=$(echo "$ROW" | awk '{print $1}')
 NEW_ID=$(echo "$ROW" | awk '{print $2}')
 
-IN_DIR="$SCRATCH_BASE/03_outputs/02_fastp"
-OUT_DIR="$SCRATCH_BASE/03_outputs/03_sortmerna"
+IN_DIR="$BASE/${SPEC}/03_outputs/02_fastp"
+OUT_DIR="$BASE/${SPEC}/03_outputs/03_sortmerna"
 CLEAN_DIR="${OUT_DIR}/clean_reads"
 RRNA_DIR="${OUT_DIR}/rRNA_reads"
 FAILED_DIR="${OUT_DIR}/FAILED_workdirs"
@@ -35,17 +36,17 @@ mkdir -p "$CLEAN_DIR" "$RRNA_DIR" "$FAILED_DIR"
 
 # Container image - same one barrnap.sb uses, so indexing and alignment run
 # against the identical SortMeRNA build/version.
-SIF="$SCRATCH_BASE/images/sortmerna.sif"
+SIF="$BASE/images/sortmerna.sif"
 
 # Database arguments (--ref db1.fasta --ref db2.fasta ...)
-DEFAULT="$SCRATCH_BASE/01_inputs/databases/smr_v4.3_default_db.fasta"
-CUSTOM="$SCRATCH_BASE/01_inputs/databases/custom_db.fasta"
+DEFAULT="$BASE/databases/smr_v4.3_default_db.fasta"
+CUSTOM="$BASE/databases/custom_db.fasta"
 
 # Shared index built once by barrnap.sb (Step 4) covering BOTH DEFAULT and
 # CUSTOM above, in that order. Must match barrnap.sb's INDEX_DIR exactly, and
 # DEFAULT/CUSTOM above must match barrnap.sb's DEFAULT_DB/CUSTOM_DB exactly -
 # SortMeRNA validates the index against the specific ref files/order given.
-SHARED_IDX_DIR="$SCRATCH_BASE/01_inputs/databases/species_barrnap/idx"
+SHARED_IDX_DIR="$BASE/databases/${SPEC}_barrnap/idx"
 
 # 2. Environment Setup
 # No conda env needed - sortmerna now runs from the same Singularity image
@@ -77,7 +78,7 @@ run_sortmerna_and_check () {
     mkdir -p "$WORKDIR"
 
     echo "Running SortMeRNA ($LABEL) for $NEW_ID..."
-    singularity exec -B "${SCRATCH_BASE}:${SCRATCH_BASE}" "${SIF}" \
+    singularity exec -B "${BASE}:${BASE}" "${SIF}" \
         sortmerna "$@" --workdir "$WORKDIR" --threads "$THREADS"
     local EXIT_CODE=$?
 

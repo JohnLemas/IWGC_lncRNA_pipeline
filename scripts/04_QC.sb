@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=04:00:00
-#SBATCH --output=/path/to/project/dir/logs/%x-%j.SLURMout
+#SBATCH --output=/path/to/project/dir/species/logs/%x-%j.SLURMout
 
 # Load all required modules at the start
 ml purge
@@ -11,12 +11,13 @@ ml load FastQC/0.12.1-Java-11
 ml load MultiQC
 
 BASE="/path/to/project/dir" # change this to reflect your working directory
+SPEC="species"
 
 # ==============================================================================
 # 1. QC for Raw Reads
 # ==============================================================================
-IN_RAW="${BASE}/01_inputs/raw_reads"
-OUT_RAW="${BASE}/01_inputs/raw_reads/QC"
+IN_RAW="${BASE}/${SPEC}/01_inputs/raw_reads"
+OUT_RAW="${BASE}/${SPEC}/01_inputs/raw_reads/QC"
 
 mkdir -p "${OUT_RAW}"
 
@@ -33,8 +34,8 @@ echo ">>>Finished raw reads"
 # ==============================================================================
 # 2. QC for FastP Reads
 # ==============================================================================
-IN_FASTP="${BASE}/03_outputs/01_fastp"
-OUT_FASTP="${BASE}/03_outputs/01_fastp/QC"
+IN_FASTP="${BASE}/${SPEC}/03_outputs/01_fastp"
+OUT_FASTP="${BASE}/${SPEC}/03_outputs/01_fastp/QC"
 
 mkdir -p "${OUT_FASTP}/"
 
@@ -50,8 +51,8 @@ echo ">>>Finished trimmed reads"
 # ==============================================================================
 # 3. QC for Clean (SortMeRNA) Reads
 # ==============================================================================
-IN_CLEAN="${BASE}/03_outputs/03_sortmerna/clean_reads"
-OUT_CLEAN="${BASE}/03_outputs/03_sortmerna/QC"
+IN_CLEAN="${BASE}/${SPEC}/03_outputs/03_sortmerna/clean_reads"
+OUT_CLEAN="${BASE}/${SPEC}/03_outputs/03_sortmerna/QC"
 
 mkdir -p "${OUT_CLEAN}/multiQC"
 

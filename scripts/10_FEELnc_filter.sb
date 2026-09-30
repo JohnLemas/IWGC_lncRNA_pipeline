@@ -3,20 +3,25 @@
 #SBATCH --cpus-per-task=20
 #SBATCH --mem=64G
 #SBATCH --time=04:00:00
-#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+
+set -euo pipefail
 
 # 1. Paths
 BASE="/path/to/working/dir" # change this to reflect your working directory
+SPEC="species"
 IMAGE="${BASE}/images/FEELnc2.sif"
-INPUT_GTF="${BASE}/03_outputs/04_stringtie/species_candidates.gtf" # make sure this has your desired species prefix
-REF_ANN="${BASE}/01_inputs/species_mRNA.gtf" # make sure this has your desired species prefix
-OUTPUT_DIR="${BASE}/03_outputs/05_FEELnc"
-OUTPUT_GTF="${BASE}/03_outputs/05_FEELnc/species_FEELnc.gtf" # make sure this has your desired species prefix
-FEELNC_DIR="${BASE}/scripts/feelnc"
+
+# Inputs
+INPUT_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
+REF_ANN="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
+OUTPUT_DIR="${BASE}/${SPEC}/03_outputs/05_FEELnc"
+OUTPUT_GTF="${BASE}/${SPEC}/03_outputs/05_FEELnc/${SPEC}_FEELnc.gtf"
+FEELNC_DIR="${BASE}/${SPEC}/scripts/feelnc"
 
 mkdir -p $OUTPUT_DIR
 
-# 2. Run it
+# 2. Run the script with the image
 singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
     env PERL5LIB="${FEELNC_DIR}/lib" \
     perl ${FEELNC_DIR}/scripts/FEELnc_filter.pl \

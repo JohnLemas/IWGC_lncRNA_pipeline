@@ -4,13 +4,16 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=45G
 #SBATCH --time=01:30:00
-#SBATCH --output=/path/to/working/dir/logs/%x-%j.SLURMout
+#SBATCH --output=/path/to/working/dir/species/logs/%x-%j.SLURMout
+
+set -euo pipefail
 
 # Paths
 BASE="/path/to/working/dir" # change this to reflect your working directory
-GENOME="${BASE}/01_inputs/species.chromosomes.fa" # make sure this matches the species prefix
-ANNO="${BASE}/01_inputs/species_mRNA.gtf" # make sure this matches the species prefix
-INDEX="${BASE}/01_inputs/species_indexed" # make sure this matches the species prefix
+SPEC="species" # Set this to the species prefix for working directories and output files (ex: AmaTu=Amaranthus tuberculatus)
+GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa" # make sure this matches the species prefix
+ANNO="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf" # make sure this matches the species prefix
+INDEX="${BASE}/${SPEC}/01_inputs/${SPEC}_indexed" # make sure this matches the species prefix
 
 echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annotation:\n\t${ANNO}"
 

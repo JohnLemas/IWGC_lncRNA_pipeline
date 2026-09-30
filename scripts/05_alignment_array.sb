@@ -1,25 +1,26 @@
 #!/bin/bash --login
 #SBATCH --job-name=species_align
-#SBATCH --array=1-1-[number of samples from wc -l species_metadata.txt]
+#SBATCH --array=1-[number of samples from wc -l species_metadata.txt]
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=01:00:00 # sortmeRNA applies a heavy filter. Check remaining read dept and adjust accordingly
-#SBATCH --output=/path/to/working/dir/logs/align/%x-%j_%A.out
+#SBATCH --output=/path/to/working/dir/species/logs/align/%x-%j_%A.out
 
 # 1. Paths & Variables
 BASE="/path/to/working/dir"
-LIST="${BASE}/01_inputs/species_metadata.txt"
+SPEC="species"
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
 # Make sure the metadata is built so that the read ID from the machine is column 1 and the new ID with tissue type info is column 2. 
-ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r')
-OLD_ID=$(echo "$ROW" | awk '{print $1}')
-NEW_ID=$(echo "$ROW" | awk '{print $2}')
+METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
+ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$METADATA" | tr -d '\r')
+OLD_ID=$(echo "$ROW" | awk -F'\t' '{print $1}')
+NEW_ID=$(echo "$ROW" | awk -F'\t' '{print $2}')
 
 # Input reads come directly from SortMeRNA clean_reads directory
-DATA_DIR="${BASE}/03_outputs/02_sortmerna/clean_reads"
-INDEX_DIR="${BASE}/01_inputs/species_indexed"
-OUT_DIR="${BASE}/03_outputs/03_STAR"
+DATA_DIR="${BASE}/${SPEC}/03_outputs/02_sortmerna/clean_reads"
+INDEX_DIR="${BASE}/${SPEC}/01_inputs/${SPEC}_indexed"
+OUT_DIR="${BASE}/${SPEC}/03_outputs/03_STAR"
 TMP_DIR="${OUT_DIR}/tmp_${NEW_ID}"
 
 mkdir -p "$OUT_DIR" "$TMP_DIR"
@@ -72,16 +73,19 @@ if [ -f "$PE_BAM" ] && [ -f "$SE_BAM" ]; then
     echo "Merging PE and SE BAM files into $FINAL_BAM..."
     samtools merge -@ "$THREADS" -o "$FINAL_BAM" "$PE_BAM" "$SE_BAM"
     samtools index -@ "$THREADS" "$FINAL_BAM"
+    mv "$TMP_DIR"/*final.out $OUT_DIR
     rm -rf "$TMP_DIR"
 elif [ -f "$PE_BAM" ]; then
     echo "Moving PE BAM to final destination..."
     mv "$PE_BAM" "$FINAL_BAM"
     samtools index -@ "$THREADS" "$FINAL_BAM"
+    mv "$TMP_DIR"/*final.out $OUT_DIR
     rm -rf "$TMP_DIR"
 elif [ -f "$SE_BAM" ]; then
     echo "Moving SE BAM to final destination..."
     mv "$SE_BAM" "$FINAL_BAM"
     samtools index -@ "$THREADS" "$FINAL_BAM"
+    mv "$TMP_DIR"/*final.out $OUT_DIR
     rm -rf "$TMP_DIR"
 else
     echo "ERROR: No BAM files generated for $NEW_ID in $TMP_DIR"

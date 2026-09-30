@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=00:30:00
-#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
 
 # ========>------- Build the lncRNA TPM matrix -------<======== #
 # NOTE: Run this AFTER stringtie_quantify.sb has produced t_data.ctab for every
@@ -14,17 +14,16 @@
 # table on transcript_id, the same way it already joins in the tracking summary.
 
 BASE="/path/to/working/dir"
-PREFIX="species"
+SPEC="species"
+IMAGE="${BASE}/images/rbio_tools.sif"
 
-QUANT_DIR="${BASE}/03_outputs/06_quant"
-CANDIDATES_GTF="${BASE}/03_outputs/04_stringtie/${PREFIX}_candidates.gtf"
-METADATA="${BASE}/01_inputs/${PREFIX}_metadata.txt"
-OUT_DIR="${BASE}/03_outputs/06_quant"
-OUT_PREFIX="${OUT_DIR}/${PREFIX}_lncRNA_TPM"
+QUANT_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie"
+CANDIDATES_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
+METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
+OUT_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie"
+OUT_PREFIX="${OUT_DIR}/${SPEC}_lncRNA_TPM"
 
 mkdir -p "$OUT_DIR"
-
-IMAGE="${BASE}/images/rbio_tools.sif"
 
 cmd_tpm="singularity run $IMAGE tpm \
     -q \"$QUANT_DIR\" \

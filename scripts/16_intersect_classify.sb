@@ -3,7 +3,9 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --time=00:30:00
-#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+
+set -euo pipefail
 
 # Fix the locale warnings and suppress the systemd/timedatectl warning from R packages
 export LC_ALL=C
@@ -12,15 +14,13 @@ export TZ="UTC"
 date
 
 BASE="/path/to/working/dir"
-
-# Species/sample prefix used for all file naming below
-PREFIX="species" # make sure this matches your desired species prefix
+SPEC="species"
 
 # R parsing image for output files
 IMAGE="${BASE}/images/rbio_tools.sif"
 
 # Single shared output directory for all intersect/classify steps (directory only, no prefix baked in)
-INT_CLASS_OUT="${BASE}/03_outputs/11_int_class"
+INT_CLASS_OUT="${BASE}/${SPEC}/03_outputs/11_int_class"
 mkdir -p $INT_CLASS_OUT
 
 # File path prefix (directory + sample name) used throughout the rest of the script
@@ -29,11 +29,11 @@ INT_PFX="${INT_CLASS_OUT}/${PREFIX}"
 # =======>------- Intersect IDs -------<======== #
 
 # Input files. script can run with at least two of the tools, and works with gtf and txt files.
-FEELnc="${BASE}/03_outputs/05_FEELnc/${PREFIX}_FEELnc.gtf"
-CPAT="${BASE}/03_outputs/06_cpat/${PREFIX}_cpat.output"
-lncBoost="${BASE}/03_outputs/07_lncBoost/${PREFIX}_predictions.txt"
-lncFinder="${BASE}/03_outputs/08_lncFinder/${PREFIX}_lncFinder_results.csv"
-DIAMOND="${BASE}/03_outputs/09_diamond/${PREFIX}_diamond_out.txt"
+FEELnc="${BASE}/${SPEC}/03_outputs/05_FEELnc/${SPEC}_FEELnc.gtf"
+CPAT="${BASE}/${SPEC}/03_outputs/06_cpat/${SPEC}_cpat.output"
+lncBoost="${BASE}/${SPEC}/03_outputs/07_lncBoost/${SPEC}_predictions.txt"
+lncFinder="${BASE}/${SPEC}/03_outputs/08_lncFinder/${SPEC}_lncFinder_results.csv"
+DIAMOND="${BASE}/${SPEC}/03_outputs/09_diamond/${SPEC}_diamond_out.txt"
 
 echo -e ">>>Intersect:\nInput files:\n${FEELnc}\n${CPAT}\n${lncFinder}\n${lncBoost}\n${DIAMOND}\n...\n"
 
@@ -47,8 +47,8 @@ echo -e ">>>Intersect:\nIntersection complete.\nlncRNA IDs:\n${INT_PFX}_final_id
 
 # =======>------- Pull seqs and gtf -------<======== #
 
-CAN_SEQS="${BASE}/03_outputs/04_stringtie/${PREFIX}_candidates.fasta"
-CAN_GTF="${BASE}/03_outputs/04_stringtie/${PREFIX}_candidates.gtf"
+CAN_SEQS="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
+CAN_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
 
 echo -e ">>>Pulling sequences and gtf for final lncRNA IDs...\nInput files:\n${CAN_SEQS}\n${CAN_GTF}\n...\n"
 
@@ -70,9 +70,9 @@ grep -Fwf ${INT_PFX}_final_ids.txt ${CAN_GTF} > ${INT_PFX}_lncRNA.gtf
 # 1. Generate classifications file via FEELnc_classifier.pl
 
 FEELnc_IMG="${BASE}/images/FEELnc.sif"
-FEELNC_DIR="${BASE}/02_scripts/feelnc"
+FEELNC_DIR="${BASE}/scripts/feelnc"
 LNC_GTF="${INT_PFX}_lncRNA.gtf"
-mRNA_GTF="${BASE}/01_inputs/${PREFIX}_mRNA.gtf"
+mRNA_GTF="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
 
 # 2. Run the classifier
 cmd4="singularity exec \
@@ -108,7 +108,7 @@ echo -e ">>>Classification complete."
 
 # =======>------- Intersect lncRNA/TE -------<======== #
 
-TE_GFF3="${BASE}/01_inputs/${PREFIX}_TEanno.gff3" # rename the output from EDTA to match here
+TE_GFF3="${BASE}/${SPEC}/01_inputs/${SPEC}_TEanno.gff3" # rename the output from EDTA to match here
 
 echo -e ">>>Intersect lncRNA/TE:\nInput files:\n${LNC_GTF}\n${TE_GFF3}\n...\n"
 
@@ -145,7 +145,7 @@ echo -e ">>>Finalize:\nFinal annotation table complete:\n${FINAL_TSV}\n"
 # ALL StringTie candidates. It has no dependency on this script's outputs, so it
 # is simply consumed here as an input to append the Tissue_Type column.
 
-TRACKING_SUMMARY="${BASE}/03_outputs/10_trace/${PREFIX}_tracking_summary.tsv"
+TRACKING_SUMMARY="${BASE}/${SPEC}/03_outputs/10_trace/${SPEC}_tracking_summary.tsv"
 TMP_WITH_TISSUE="${INT_PFX}_final_annotation_with_tissue_tmp.tsv"
 
 echo -e ">>>Finalize:\nAdding Tissue_Type column from tracking summary...\nInput:\n${TRACKING_SUMMARY}\n"

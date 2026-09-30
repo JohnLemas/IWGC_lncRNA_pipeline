@@ -3,23 +3,25 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=00:30:00
-#SBATCH --output=/path/to/working/dir/logs/%x_%j.out
+#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+
+set -euo pipefail
 
 # ========>------- Create tracking files -------<======== #
 # NOTE: this step can run BEFORE intersect_classify.sb. It tracks tissue/sample
 # support for every StringTie candidate transcript (not just the final filtered
 # lncRNA set), so it has no dependency on the intersect/classify outputs and can
-# run right after 05_stringtie. intersect_classify.sb consumes the resulting
+# run right after 04_stringtie. intersect_classify.sb consumes the resulting
 # tracking summary TSV as an input to add the Tissue_Type column to its final table.
 
 BASE="/path/to/working/dir"
-PREFIX="species"
+SPEC="species"
 
-ASSEMBLY_DIR="${BASE}/03_outputs/05_stringtie/sample_assemblies"
-OUT_DIR="${BASE}/03_outputs/10_trace"
-REF="${BASE}/03_outputs/05_stringtie/${PREFIX}_candidates.gtf"
+ASSEMBLY_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/sample_assemblies"
+OUT_DIR="${BASE}/${SPEC}/03_outputs/10_trace"
+REF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
 LIST="${OUT_DIR}/file_list.txt"
-METADATA="${BASE}/01_inputs/${PREFIX}_metadata.txt"
+METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
 
 mkdir -p $OUT_DIR
 
@@ -35,9 +37,9 @@ gffcompare -r $REF -i $LIST -o ${OUT_DIR}/candidate
 # ========>------- Parse the output files -------<======== #
 
 TRACK_FILE="${OUT_DIR}/candidate.tracking"
-TRACKING_SUMMARY="${OUT_DIR}/${PREFIX}_tracking_summary.tsv"
+TRACKING_SUMMARY="${OUT_DIR}/${SPEC}_tracking_summary.tsv"
 
-CANDIDATE_FASTA="${BASE}/03_outputs/05_stringtie/${PREFIX}_candidates.fasta"
+CANDIDATE_FASTA="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
 
 IMAGE="${BASE}/images/rbio_tools.sif"
 
