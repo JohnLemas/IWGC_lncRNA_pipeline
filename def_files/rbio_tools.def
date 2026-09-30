@@ -2,13 +2,12 @@ Bootstrap: docker
 From: ubuntu:22.04
 
 %files
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/intersect_ids.R /usr/local/bin/intersect_ids.R
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/classifications.R /usr/local/bin/classifications.R
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/lncFinder.R /usr/local/bin/lncFinder.R
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/intersect_lncRNA_TE.R /usr/local/bin/intersect_lncRNA_TE.R
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/build_final_annotation.R /usr/local/bin/build_final_annotation.R
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/parse_gffcompare_tracking.R /usr/local/bin/parse_gffcompare_tracking.R
-    /mnt/scratch/lemasjoh/BASF/IWGC_lncRNA_pipeline/scripts/add_tissue_annotation.R /usr/local/bin/add_tissue_annotation.R
+    /Users/jmlemas/Documents/BASF/build_images/intersect_ids.R /usr/local/bin/intersect_ids.R
+    /Users/jmlemas/Documents/BASF/build_images/lncFinder.R /usr/local/bin/lncFinder.R
+    /Users/jmlemas/Documents/BASF/build_images/intersect_lncRNA_TE.R /usr/local/bin/intersect_lncRNA_TE.R
+    /Users/jmlemas/Documents/BASF/build_images/build_final_annotation.R /usr/local/bin/build_final_annotation.R
+    /Users/jmlemas/Documents/BASF/build_images/parse_gffcompare_tracking.R /usr/local/bin/parse_gffcompare_tracking.R
+    /Users/jmlemas/Documents/BASF/build_images/parse_tpm_matrix.R /usr/local/bin/parse_tpm_matrix.R
 
 %environment
     export LC_ALL=C.UTF-8
@@ -72,9 +71,6 @@ From: ubuntu:22.04
     if [ "$1" = "intersect" ]; then
         shift
         exec Rscript /usr/local/bin/intersect_ids.R "$@"
-    elif [ "$1" = "classify" ]; then
-        shift
-        exec Rscript /usr/local/bin/classifications.R "$@"
     elif [ "$1" = "lnc_predict" ]; then
         shift
         exec Rscript /usr/local/bin/lncFinder.R "$@"
@@ -87,13 +83,13 @@ From: ubuntu:22.04
     elif [ "$1" = "track" ]; then
         shift
         exec Rscript /usr/local/bin/parse_gffcompare_tracking.R "$@"
-    elif [ "$1" = "add_tissue" ]; then
+    elif [ "$1" = "tpm" ]; then
         shift
-        exec Rscript /usr/local/bin/add_tissue_annotation.R "$@"
+        exec Rscript /usr/local/bin/parse_tpm_matrix.R "$@"
     else
-        echo "Usage: singularity run rbio_tools.sif [intersect|classify|lnc_predict|intersect_te|finalize|track|add_tissue] [options]"
+        echo "Usage: singularity run rbio_tools.sif [intersect|lnc_predict|intersect_te|finalize|track|tpm] [options]"
     fi
 
 %labels
     Author "lemasjoh, Claude Sonnet 5"
-    Description "Single unified image containing R, ViennaRNA, and lncRNA processing scripts."
+    Description "Single unified image containing R, ViennaRNA, and lncRNA processing scripts (classify and add_tissue steps folded into finalize)."
