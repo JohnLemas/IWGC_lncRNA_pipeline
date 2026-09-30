@@ -19,6 +19,16 @@ option_list <- list(
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
+# Case-insensitive matching: different tools can report the same transcript
+# with different ID casing (e.g. "rna-XR_..." vs "RNA-XR_..."), which used to
+# make reduce(provided, intersect) and setdiff() silently treat them as
+# different transcripts. norm() is used ONLY to decide which IDs are "the
+# same" - we still write out the original-cased ID everywhere, so exact-match
+# downstream steps (grep -Fwf, seqkit grep, build_final_annotation.R's joins)
+# keep working unchanged. If those still miss matches, the GTF itself is using
+# yet a third casing convention and those steps need case-insensitive matching too.
+norm <- function(x) tolower(trimws(as.character(x)))
+
 # 2. DATA LOADING LOGIC (With Memory Optimization)
 get_ids <- function(file, tool_name) {
   if (is.null(file) || !file.exists(file)) {
@@ -63,7 +73,7 @@ get_ids <- function(file, tool_name) {
     rm(df)
   }
   
-  ids <- as.character(trimws(ids))
+  ids <- trimws(as.character(ids))
   cat(length(ids), "candidates identified.\n")
   gc() # Force garbage collection to free RAM
   return(ids)
@@ -82,12 +92,25 @@ provided <- pos_list[!sapply(pos_list, is.null)]
 
 if(length(provided) < 1) stop("No input files found!", call.=FALSE)
 
-final_ids <- reduce(provided, intersect)
+# Lookup from normalized ID -> first-seen original-cased ID, built across
+# every tool's output plus DIAMOND, so normalized intersections/setdiffs can
+# be mapped back to a real, on-disk ID string for the files we write out.
+canonical_lookup <- c(provided, list(DIAMOND = prot_hits)) %>%
+  compact() %>%
+  unlist(use.names = FALSE) %>%
+  { tibble(key = norm(.), id = .) } %>%
+  distinct(key, .keep_all = TRUE) %>%
+  deframe()
+
+provided_norm <- map(provided, norm)
+final_ids_norm <- reduce(provided_norm, intersect)
 
 # Apply DIAMOND filter
 if(!is.null(prot_hits)) {
-  final_ids <- setdiff(final_ids, prot_hits)
+  final_ids_norm <- setdiff(final_ids_norm, norm(prot_hits))
 }
+
+final_ids <- unname(canonical_lookup[final_ids_norm])
 
 # 4. SAVE OUTPUTS
 # Save the clean list first (safety in case of OOM on summary)
@@ -96,15 +119,16 @@ cat("\n--- FINAL CONSENSUS COUNT:", length(final_ids), "---\n")
 
 # Build and save Summary Table
 cat("Building summary table...\n")
-all_ids <- unique(unlist(provided))
+all_ids_norm <- unique(unlist(provided_norm, use.names = FALSE))
+all_ids <- unname(canonical_lookup[all_ids_norm])
 summary_tab <- data.frame(ID = all_ids, stringsAsFactors = FALSE)
 
-if(!is.null(feelnc_ids)) summary_tab$Pass_FEELnc  <- all_ids %in% feelnc_ids
-if(!is.null(cpat_ids))   summary_tab$Pass_CPAT    <- all_ids %in% cpat_ids
-if(!is.null(lncf_ids))   summary_tab$Pass_LncF    <- all_ids %in% lncf_ids
-if(!is.null(boost_ids))  summary_tab$Pass_Boost   <- all_ids %in% boost_ids
-if(!is.null(prot_hits))  summary_tab$Is_Protein   <- all_ids %in% prot_hits
-summary_tab$Final_Set <- all_ids %in% final_ids
+if(!is.null(feelnc_ids)) summary_tab$Pass_FEELnc  <- all_ids_norm %in% norm(feelnc_ids)
+if(!is.null(cpat_ids))   summary_tab$Pass_CPAT    <- all_ids_norm %in% norm(cpat_ids)
+if(!is.null(lncf_ids))   summary_tab$Pass_LncF    <- all_ids_norm %in% norm(lncf_ids)
+if(!is.null(boost_ids))  summary_tab$Pass_Boost   <- all_ids_norm %in% norm(boost_ids)
+if(!is.null(prot_hits))  summary_tab$Is_Protein   <- all_ids_norm %in% norm(prot_hits)
+summary_tab$Final_Set <- all_ids_norm %in% final_ids_norm
 
 write_csv(summary_tab, paste0(opt$out, "_intersection_summary.csv"))
 cat("Process complete. Results saved with prefix:", opt$out, "\n")

@@ -1,23 +1,14 @@
-#!/usr/bin/env Rscript
+#!/bin/usr/env Rscript
 # parse_tpm_matrix.R
-#
-# Aggregates per-sample TPM values (from stringtie_quantify.sb's -e -B output) into a
-# transcript x sample TPM matrix, restricted to the predicted lncRNA candidates, with
-# summary columns (mean/max TPM, samples detected) and an optional per-tissue mean TPM
-# table when the metadata file has a second column. Plays the same role for TPM that
-# parse_gffcompare_tracking.R plays for tissue/sample tracking.
-#
-# Called as: singularity run rbio_tools.sif tpm -q <quant_dir> -c <candidates.gtf> \
-#                -m <species_metadata.txt> -o <out_prefix>
 
 suppressMessages({
+  library(rtracklayer)
   library(optparse)
   library(dplyr)
   library(purrr)
   library(readr)
   library(tidyr)
   library(tibble)
-  library(rtracklayer)
 })
 
 option_list <- list(
@@ -60,37 +51,48 @@ if (has_tissue) {
   )
 }
 
-# ---- 3. read each sample's t_data.ctab, keep only candidate transcripts ----
+# ---- 3. read each sample's quantification GTF, keep only candidate transcripts ----
 read_sample_tpm <- function(sample_id) {
-  ctab_path <- file.path(opt$quant_dir, sample_id, "t_data.ctab")
-  if (!file.exists(ctab_path)) {
-    warning("No t_data.ctab found for ", sample_id, ", skipping.", call. = FALSE)
+  gtf_path <- file.path(opt$quant_dir, sample_id, paste0(sample_id, "_quant.gtf"))
+  if (!file.exists(gtf_path)) {
+    warning("No quantification GTF found for ", sample_id, " at ", gtf_path,
+            ", skipping.", call. = FALSE)
     return(NULL)
   }
-  read_tsv(ctab_path, show_col_types = FALSE) %>%
-    transmute(transcript_id = t_name, !!sample_id := TPM) %>%
-    filter(transcript_id %in% candidate_ids) %>%
-    distinct(transcript_id, .keep_all = TRUE)
+  gr <- import(gtf_path)
+  if (!"TPM" %in% names(mcols(gr))) {
+    warning("Quantification GTF for ", sample_id, " has no TPM attribute, skipping.",
+            call. = FALSE)
+    return(NULL)
+  }
+  
+  as_tibble(mcols(gr)) %>%
+    dplyr::filter(type == "transcript") %>%
+    dplyr::mutate(TPM = as.numeric(TPM)) %>%
+    dplyr::transmute(transcript_id = transcript_id, !!sample_id := TPM) %>%
+    dplyr::filter(transcript_id %in% candidate_ids) %>%
+    dplyr::distinct(transcript_id, .keep_all = TRUE)
 }
 
-sample_frames <- compact(map(sample_ids, read_sample_tpm))
+sample_frames <- purrr::compact(map(sample_ids, read_sample_tpm))
 if (length(sample_frames) == 0) {
-  stop("No t_data.ctab files were found - check --quant_dir and sample IDs in --metadata.",
+  stop("No quantification GTF files were found - check --quant_dir and sample IDs in --metadata.",
        call. = FALSE)
 }
 
 # ---- 4. build the wide matrix: every candidate transcript_id x every sample found ----
-matrix <- reduce(sample_frames, full_join, by = "transcript_id") %>%
-  right_join(tibble(transcript_id = sort(candidate_ids)), by = "transcript_id") %>%
-  mutate(across(-transcript_id, ~ replace_na(.x, 0)))
+matrix <- purrr::reduce(sample_frames, dplyr::full_join, by = "transcript_id") %>%
+  dplyr::right_join(tibble(transcript_id = sort(candidate_ids)), by = "transcript_id") %>%
+  dplyr::mutate(dplyr::across(-transcript_id, ~ tidyr::replace_na(.x, 0)))
 
 sample_cols <- setdiff(names(matrix), "transcript_id")
 
+# Explicit base indexing for pmax avoids dplyr::select S4 method collisions
 matrix <- matrix %>%
-  mutate(
-    mean_TPM           = rowMeans(across(all_of(sample_cols))),
-    max_TPM             = do.call(pmax, as.list(select(matrix, all_of(sample_cols)))),
-    n_samples_detected = rowSums(across(all_of(sample_cols), ~ .x > 0))
+  dplyr::mutate(
+    mean_TPM           = rowMeans(matrix[, sample_cols, drop = FALSE]),
+    max_TPM             = do.call(pmax, matrix[, sample_cols, drop = FALSE]),
+    n_samples_detected = rowSums(matrix[, sample_cols, drop = FALSE] > 0)
   )
 
 matrix_out <- paste0(opt$out_prefix, ".matrix.tsv")
@@ -102,13 +104,13 @@ if (!is.null(tissue_map)) {
   present_samples <- intersect(sample_cols, tissue_map$sample_id)
   tissues <- unique(tissue_map$tissue[tissue_map$sample_id %in% present_samples])
 
-  tissue_means <- map_dfc(tissues, function(t) {
+  tissue_means <- purrr::map_dfc(tissues, function(t) {
     cols <- tissue_map$sample_id[tissue_map$tissue == t & tissue_map$sample_id %in% present_samples]
-    tibble(!!paste0("mean_TPM_", t) := rowMeans(select(matrix, all_of(cols))))
+    tibble(!!paste0("mean_TPM_", t) := rowMeans(matrix[, cols, drop = FALSE]))
   })
 
   summary <- bind_cols(
-    select(matrix, transcript_id, mean_TPM, max_TPM, n_samples_detected),
+    dplyr::select(matrix, transcript_id, mean_TPM, max_TPM, n_samples_detected),
     tissue_means
   )
 
