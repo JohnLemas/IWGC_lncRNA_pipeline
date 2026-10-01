@@ -26,8 +26,8 @@ ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST" | tr -d '\r')
 OLD_ID=$(echo "$ROW" | awk '{print $1}')
 NEW_ID=$(echo "$ROW" | awk '{print $2}')
 
-IN_DIR="$BASE/${SPEC}/03_outputs/02_fastp"
-OUT_DIR="$BASE/${SPEC}/03_outputs/03_sortmerna"
+IN_DIR="$BASE/${SPEC}/03_outputs/01_fastp"
+OUT_DIR="$BASE/${SPEC}/03_outputs/02_sortmerna"
 CLEAN_DIR="${OUT_DIR}/clean_reads"
 RRNA_DIR="${OUT_DIR}/rRNA_reads"
 FAILED_DIR="${OUT_DIR}/FAILED_workdirs"
@@ -40,7 +40,7 @@ SIF="$BASE/images/sortmerna.sif"
 
 # Database arguments (--ref db1.fasta --ref db2.fasta ...)
 DEFAULT="$BASE/databases/smr_v4.3_default_db.fasta"
-CUSTOM="$BASE/databases/custom_db.fasta"
+CUSTOM="$BASE/databases/${SPEC}_barrnap/custom_db.fasta"
 
 # Shared index built once by barrnap.sb (Step 4) covering BOTH DEFAULT and
 # CUSTOM above, in that order. Must match barrnap.sb's INDEX_DIR exactly, and
