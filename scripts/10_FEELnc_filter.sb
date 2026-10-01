@@ -17,7 +17,7 @@ INPUT_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
 REF_ANN="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
 OUTPUT_DIR="${BASE}/${SPEC}/03_outputs/05_FEELnc"
 OUTPUT_GTF="${BASE}/${SPEC}/03_outputs/05_FEELnc/${SPEC}_FEELnc.gtf"
-FEELNC_DIR="${BASE}/${SPEC}/scripts/feelnc"
+FEELNC_DIR="${BASE}/scripts/feelnc"
 
 mkdir -p $OUTPUT_DIR
 
