@@ -19,7 +19,7 @@ echo -e ">>>DIAMOND:\n...loading input files and database.."
 INPUT="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta" # this is the fasta file of candidate lncRNA sequences obtained from gffread -w ${SPEC}_candidates.fasta -g ${SPEC}_genome.fa ${SPEC}_candidates.gtf
 OUTDIR="${BASE}/${SPEC}/03_outputs/09_diamond"
 OUTPUT="${OUTDIR}/${SPEC}_diamond_out.txt" # make sure this has your desired species prefix
-DB="${BASE}/databases/uniprot_out.dmnd" # this is the DIAMOND-formatted database created from the uniprot_sprot.fasta file using diamond makedb --in uniprot_sprot.fasta -d uniprot_out.dmnd
+DB="${BASE}/databases/uniprot_db/uniprot_out.dmnd" # this is the DIAMOND-formatted database created from the uniprot_sprot.fasta file using diamond makedb --in uniprot_sprot.fasta -d uniprot_out.dmnd
 
 echo -e ">>>DIAMOND:\nDatabase:\n\t${DB}\nInput sequences:\n\t${INPUT}"
 
