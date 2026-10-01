@@ -16,8 +16,8 @@ SPEC="species"
 # ==============================================================================
 # 1. QC for Raw Reads
 # ==============================================================================
-IN_RAW="${BASE}/${SPEC}/01_inputs/raw_reads"
-OUT_RAW="${BASE}/${SPEC}/01_inputs/raw_reads/QC"
+IN_RAW="${BASE}/${SPEC}/01_inputs/raw_fastq"
+OUT_RAW="${BASE}/${SPEC}/01_inputs/raw_fastq/QC"
 
 mkdir -p "${OUT_RAW}"
 
@@ -51,10 +51,10 @@ echo ">>>Finished trimmed reads"
 # ==============================================================================
 # 3. QC for Clean (SortMeRNA) Reads
 # ==============================================================================
-IN_CLEAN="${BASE}/${SPEC}/03_outputs/03_sortmerna/clean_reads"
-OUT_CLEAN="${BASE}/${SPEC}/03_outputs/03_sortmerna/QC"
+IN_CLEAN="${BASE}/${SPEC}/03_outputs/02_sortmerna/clean_reads"
+OUT_CLEAN="${BASE}/${SPEC}/03_outputs/02_sortmerna/QC"
 
-mkdir -p "${OUT_CLEAN}/multiQC"
+mkdir -p "${OUT_CLEAN}"
 
 echo -e ">>> running QC on SortMeRNA-cleaned reads:\n$(ls -1 ${IN_CLEAN}/*.gz)"
 
