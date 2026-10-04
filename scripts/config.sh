@@ -17,4 +17,4 @@ TE_GFF3="${BASE}/${SPEC}/01_inputs/${SPEC}_TEanno.gff3" # Direct output from EDT
 METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt" # Sequencing ID in column 1. a label designating tissue type and replicate number should be in column 2 (ie sdl_rt_2 or exp_lvs_1)
 RAW_FASTQ="${BASE}/${SPEC}/01_inputs/raw_fastq" # Directory containing raw FASTQ files
 
-
+# First batch of outputs
