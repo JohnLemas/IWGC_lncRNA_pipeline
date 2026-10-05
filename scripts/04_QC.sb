@@ -1,67 +1,59 @@
 #!/bin/bash --login
 #SBATCH --job-name=QC
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=16G
-#SBATCH --time=04:00:00
-#SBATCH --output=/path/to/project/dir/species/logs/%x-%j.SLURMout
+#SBATCH --time=08:00:00
+#SBATCH --array=0-2
+#SBATCH --output=/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/A.tha/logs/%x-%A_%a.SLURMout
 
-# Load all required modules at the start
+# One array task per stage (0=raw, 1=trimmed, 2=clean) so they run in parallel
+# and a timeout in one stage can't stop the others from reaching MultiQC.
+# FastQC is skipped for files that already have output, so re-submitting
+# resumes where a previous run stopped.
+
 ml purge
 ml load FastQC/0.12.1-Java-11
 ml load MultiQC
 
-BASE="/path/to/project/dir" # change this to reflect your working directory
-SPEC="species"
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev" # change this to reflect your working directory
+SPEC="A.tha"
+THREADS="${SLURM_CPUS_PER_TASK:-8}"
 
-# ==============================================================================
-# 1. QC for Raw Reads
-# ==============================================================================
-IN_RAW="${BASE}/${SPEC}/01_inputs/raw_fastq"
-OUT_RAW="${BASE}/${SPEC}/01_inputs/raw_fastq/QC"
+case "${SLURM_ARRAY_TASK_ID}" in
+  0) STAGE="raw"
+     IN="${BASE}/${SPEC}/01_inputs/raw_fastq"
+     OUT="${IN}/QC"
+     NAME="raw_report" ;;
+  1) STAGE="trimmed"
+     IN="${BASE}/${SPEC}/03_outputs/01_fastp"
+     OUT="${IN}/QC"
+     NAME="trimmed_report" ;;
+  2) STAGE="clean"
+     IN="${BASE}/${SPEC}/03_outputs/02_sortmerna/clean_reads"
+     OUT="${BASE}/${SPEC}/03_outputs/02_sortmerna/QC"
+     NAME="clean_reads" ;;
+  *) echo "Unexpected array index: ${SLURM_ARRAY_TASK_ID}" >&2; exit 1 ;;
+esac
 
-mkdir -p "${OUT_RAW}"
+mkdir -p "${OUT}"
 
-echo -e ">>>Running QC on raw reads:\n$(ls -1 ${IN_RAW}/*.gz)"
+# Build the list of files that still need FastQC
+ALL=("${IN}"/*.gz)
+TODO=()
+for f in "${ALL[@]}"; do
+  b=$(basename "${f}")
+  b=${b%.gz}; b=${b%.fastq}; b=${b%.fq}
+  [[ -s "${OUT}/${b}_fastqc.zip" ]] || TODO+=("${f}")
+done
 
-# Run FastQC on all fastp gz files
-fastqc -t 8 -o "${OUT_RAW}" "${IN_RAW}"/*.gz
+echo ">>> [${STAGE}] ${#ALL[@]} files total, ${#TODO[@]} still need FastQC"
 
-# Run MultiQC on fastp QC outputs
-multiqc "${OUT_RAW}" -n "raw_report" -o "${OUT_RAW}" --no-data-dir
+if (( ${#TODO[@]} > 0 )); then
+  fastqc -t "${THREADS}" -o "${OUT}" "${TODO[@]}" \
+    || { echo ">>> [${STAGE}] FastQC failed; skipping MultiQC" >&2; exit 1; }
+fi
 
-echo ">>>Finished raw reads"
+multiqc "${OUT}" -n "${NAME}" -o "${OUT}" --no-data-dir --force \
+  || { echo ">>> [${STAGE}] MultiQC failed" >&2; exit 1; }
 
-# ==============================================================================
-# 2. QC for FastP Reads
-# ==============================================================================
-IN_FASTP="${BASE}/${SPEC}/03_outputs/01_fastp"
-OUT_FASTP="${BASE}/${SPEC}/03_outputs/01_fastp/QC"
-
-mkdir -p "${OUT_FASTP}/"
-
-echo -e ">>>Running QC on trimmed reads:\n$(ls -1 ${IN_FASTP}/*.gz)"
-
-# Run FastQC on all fastp gz files
-fastqc -t 8 -o "${OUT_FASTP}" "${IN_FASTP}"/*.gz
-
-# Run MultiQC on fastp QC outputs
-multiqc "${OUT_FASTP}" -n "trimmed_report" -o "${OUT_FASTP}" --no-data-dir
-
-echo ">>>Finished trimmed reads"
-# ==============================================================================
-# 3. QC for Clean (SortMeRNA) Reads
-# ==============================================================================
-IN_CLEAN="${BASE}/${SPEC}/03_outputs/02_sortmerna/clean_reads"
-OUT_CLEAN="${BASE}/${SPEC}/03_outputs/02_sortmerna/QC"
-
-mkdir -p "${OUT_CLEAN}"
-
-echo -e ">>> running QC on SortMeRNA-cleaned reads:\n$(ls -1 ${IN_CLEAN}/*.gz)"
-
-# Run FastQC on clean gz files
-fastqc -t 8 -o "${OUT_CLEAN}" "${IN_CLEAN}"/*.gz
-
-# Run MultiQC on clean QC outputs
-multiqc "${OUT_CLEAN}" -n 'clean_reads' -o "${OUT_CLEAN}" --no-data-dir
-
-echo ">>> Quality check complete."
+echo ">>> [${STAGE}] done: ${OUT}/${NAME}.html"
