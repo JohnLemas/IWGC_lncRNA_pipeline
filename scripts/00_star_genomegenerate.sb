@@ -35,7 +35,7 @@ STAR \
      --genomeDir $INDEX \
      --genomeFastaFiles $GENOME \
      --sjdbGTFfile $ANNO \
-     --sjdbGTFtagExonParentTranscript Parent \
+     --sjdbGTFtagExonParentTranscript transcript_id \
      --sjdbOverhang 99 \
      --genomeSAindexNbases 13
 
