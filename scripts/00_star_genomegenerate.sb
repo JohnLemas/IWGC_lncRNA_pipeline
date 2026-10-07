@@ -10,10 +10,15 @@ set -euo pipefail
 
 # Paths
 BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species" # Set this to the species prefix for working directories and output files (ex: AmaTu=Amaranthus tuberculatus)
-GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa" # make sure this matches the species prefix
-ANNO="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf" # make sure this matches the species prefix
-INDEX="${BASE}/${SPEC}/01_inputs/${SPEC}_indexed" # make sure this matches the species prefix
+SPEC="species" 
+
+# Inputs and outputs
+GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa" 
+ANNO="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
+INDEX="${BASE}/${SPEC}/01_inputs/${SPEC}_indexed"
+OUT="$BASE/$SPEC/01_inputs/${SPEC}_intron_limits.txt"
+
+# ------ STAR Genome Generation ------ #
 
 echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annotation:\n\t${ANNO}"
 
@@ -35,3 +40,23 @@ STAR \
      --genomeSAindexNbases 13
 
 echo -e "..process complete. Indexed genome is in\n\t${INDEX}"
+
+# ------ Intron Limits Investigation ------ #
+# This bash script investigates intron length limits based on the splicing junctions in the STAR index.
+# This is used downstream in the STAR alignment process to set intron length limits.
+# Without this, STAR may not correctly handle long introns during alignment.
+# If you are hitting OOM kill events in StringTie Assembly, double check that the intron limits are set correctly.
+
+echo -e ">>>STAR:\n\tInvestigating intron limits.\nIndex directory:\n\t${INDEX}\nOutput file:\n\t${OUT}"
+
+[ -s "$INDEX/sjdbList.out.tab" ] || { echo "ERROR: no sjdbList.out.tab in $INDEX"; exit 1; }
+
+awk '{print $3-$2+1}' "$INDEX/sjdbList.out.tab" | sort -n | awk '
+  {a[NR]=$1}
+  END{
+    max=a[NR]; i=int(NR*0.999); if(i<1) i=1; p999=a[i]
+    printf "N_JUNC=%d\nINTRON_P999=%d\nINTRON_MAX_ANNOT=%d\nINTRON_LIMIT=%d\n", NR, p999, max, (int(max/1000)+1)*1000
+  }' > "$OUT"
+cat "$OUT"
+
+echo -e ">>>STAR:\n\tIntron limits investigation complete. Results written to\n\t${OUT}"
