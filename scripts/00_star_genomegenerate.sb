@@ -52,11 +52,12 @@ echo -e ">>>STAR:\n\tInvestigating intron limits.\nIndex directory:\n\t${INDEX}\
 [ -s "$INDEX/sjdbList.out.tab" ] || { echo "ERROR: no sjdbList.out.tab in $INDEX"; exit 1; }
 
 awk '{print $3-$2+1}' "$INDEX/sjdbList.out.tab" | sort -n | awk '
+  function q(p,   i){i=int(NR*p); if(i<1) i=1; return a[i]}
   {a[NR]=$1}
   END{
-    max=a[NR]; i=int(NR*0.999); if(i<1) i=1; p999=a[i]
-    printf "N_JUNC=%d\nINTRON_P999=%d\nINTRON_MAX_ANNOT=%d\nINTRON_LIMIT=%d\n", NR, p999, max, (int(max/1000)+1)*1000
+    p9999=q(0.9999); lim=(int(p9999/1000)+1)*1000
+    for(i=1;i<=NR;i++) if(a[i]>lim) over++
+    printf "N_JUNC=%d\nINTRON_P999=%d\nINTRON_P9999=%d\nINTRON_MAX_ANNOT=%d\nINTRON_LIMIT=%d\nN_JUNC_ABOVE_LIMIT=%d\n", NR, q(0.999), p9999, a[NR], lim, over+0
   }' > "$OUT"
-cat "$OUT"
 
 echo -e ">>>STAR:\n\tIntron limits investigation complete. Results written to\n\t${OUT}"
