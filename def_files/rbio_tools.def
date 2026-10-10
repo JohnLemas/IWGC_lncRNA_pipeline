@@ -2,12 +2,12 @@ Bootstrap: docker
 From: ubuntu:22.04
 
 %files
-    /Users/jmlemas/Documents/BASF/build_images/intersect_ids.R /usr/local/bin/intersect_ids.R
-    /Users/jmlemas/Documents/BASF/build_images/lncFinder.R /usr/local/bin/lncFinder.R
-    /Users/jmlemas/Documents/BASF/build_images/intersect_lncRNA_TE.R /usr/local/bin/intersect_lncRNA_TE.R
-    /Users/jmlemas/Documents/BASF/build_images/build_final_annotation.R /usr/local/bin/build_final_annotation.R
-    /Users/jmlemas/Documents/BASF/build_images/parse_gffcompare_tracking.R /usr/local/bin/parse_gffcompare_tracking.R
-    /Users/jmlemas/Documents/BASF/build_images/parse_tpm_matrix.R /usr/local/bin/parse_tpm_matrix.R
+    /mnt/scratch/lemasjoh/build_image/intersect_ids.R /usr/local/bin/intersect_ids.R
+    /mnt/scratch/lemasjoh/build_image/lncFinder.R /usr/local/bin/lncFinder.R
+    /mnt/scratch/lemasjoh/build_image/intersect_lncRNA_TE.R /usr/local/bin/intersect_lncRNA_TE.R
+    /mnt/scratch/lemasjoh/build_image/build_final_annotation.R /usr/local/bin/build_final_annotation.R
+    /mnt/scratch/lemasjoh/build_image/parse_gffcompare_tracking.R /usr/local/bin/parse_gffcompare_tracking.R
+    /mnt/scratch/lemasjoh/build_image/parse_tpm_matrix.R /usr/local/bin/parse_tpm_matrix.R
 
 %environment
     export LC_ALL=C.UTF-8
