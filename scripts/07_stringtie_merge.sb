@@ -39,7 +39,8 @@ ml load StringTie/2.2.1-GCC-11.2.0-Python-2.7.18
 # -G: Your original reference (keeps known gene names)
 # -o: The final master file
 # -m: Minimum transcript length to include in the master (200bp)
-stringtie --merge -G $REF_GTF -m 200 -o $OUT_GTF ${gtf_filePath[*]}
+stringtie --merge -G "$REF_GTF" -m 200 -o "$OUT_GTF" "${gtf_filePath[@]}" || { echo "ERROR: stringtie --merge failed" >&2; exit 1; }
+[ -s "$OUT_GTF" ] || { echo "ERROR: $OUT_GTF is empty" >&2; exit 1; }
 
 echo "Master Merge Complete: $OUT_GTF"
 
