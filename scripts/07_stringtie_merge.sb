@@ -12,7 +12,7 @@ BASE="/path/to/working/dir" # change this to reflect your working directory
 SPEC="species"
 
 # Inputs
-GTF_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/sample_assemblies"
+GTF_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/SRR_assemblies"
 REF_GTF="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
 OUT_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_denovo_trans.gtf"
 
