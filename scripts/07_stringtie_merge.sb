@@ -17,7 +17,7 @@ REF_GTF="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
 OUT_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_denovo_trans.gtf"
 
 # Load the file IDs into a Bash array
-mapfile -t SAMPLE_IDS < <(cut -f 3 "${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt")
+mapfile -t SAMPLE_IDS < <(cut -f 2 "${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt")
 
 # Create the list of GTF file paths
 gtf_filePath=()
