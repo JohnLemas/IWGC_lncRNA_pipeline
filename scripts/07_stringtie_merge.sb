@@ -47,7 +47,7 @@ echo "Master Merge Complete: $OUT_GTF"
 
 CAN_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
 SEQ_OUT="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
-GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}_chromosomes.fa"
+GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa"
 
 echo -e "Extracting candidate transcript sequences from $(basename $OUT_GTF)...\n"
 
