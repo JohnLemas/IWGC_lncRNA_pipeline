@@ -1,12 +1,12 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_align
+#SBATCH --job-name=align
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=01:00:00 # sortmeRNA applies a heavy filter. Check remaining read dept and adjust accordingly
+#SBATCH --time=03:00:00 # sortmeRNA applies a heavy filter. Check remaining read dept and adjust accordingly
 # NOTE: --array and --output are NOT set here: submit_1_raw_to_alignment.sh passes them (array size from METADATA, log dir from LOG_DIR in config.sh).
 
-# 1. Paths & Variables
-source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+# 1. Paths & Variables - all defined in config.sh
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
 # Make sure the metadata is built so that the read ID from the machine is column 1 and the new ID with tissue type info is column 2. 
@@ -20,6 +20,16 @@ INDEX_DIR="$STAR_INDEX"
 OUT_DIR="$STAR_DIR"
 TMP_DIR="${OUT_DIR}/tmp_${NEW_ID}"
 
+# Intron limits written by 00_star_genomegenerate.sb
+INTRON_FILE="$INTRON_LIMITS"
+[ -s "$INTRON_FILE" ] || { echo "ERROR: missing $INTRON_FILE" >&2; exit 1; }
+
+INTRON_LIMIT=$(awk -F= '$1=="INTRON_LIMIT"{print $2}' "$INTRON_FILE")
+if ! [[ "$INTRON_LIMIT" =~ ^[0-9]+$ ]] || [ "$INTRON_LIMIT" -lt 1000 ]; then
+    echo "ERROR: bad INTRON_LIMIT '${INTRON_LIMIT}' in $INTRON_FILE" >&2; exit 1
+fi
+echo "Using intron limit: $INTRON_LIMIT"
+
 mkdir -p "$OUT_DIR" "$TMP_DIR"
 
 THREADS=${SLURM_CPUS_PER_TASK:-1}
@@ -31,34 +41,37 @@ ml load SAMtools
 
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $NEW_ID ($OLD_ID)"
 
-# --- 3. ALIGN PAIRED-END CLEAN READS ---
+STAR_OPTS=(
+  --runThreadN "$THREADS"
+  --genomeDir "$INDEX_DIR"
+  --readFilesCommand zcat
+  --outSAMtype BAM SortedByCoordinate
+  --outSAMattrIHstart 0
+  --outSAMattributes NH HI AS nM NM
+  --outSAMstrandField intronMotif
+  --outFilterType BySJout
+  --alignIntronMin 20
+  --alignIntronMax "$INTRON_LIMIT"
+  --alignMatesGapMax "$INTRON_LIMIT"
+  --outFilterMultimapNmax 10
+)
+
+# --- 3. PAIRED-END ---
 if [ -f "${DATA_DIR}/${NEW_ID}_1_sortmerna.fastq.gz" ] && [ -f "${DATA_DIR}/${NEW_ID}_2_sortmerna.fastq.gz" ]; then
     echo "Aligning Paired-End non-rRNA reads for $NEW_ID..."
-    STAR \
-      --runThreadN "$THREADS" \
-      --genomeDir "$INDEX_DIR" \
+    STAR "${STAR_OPTS[@]}" \
       --readFilesIn "${DATA_DIR}/${NEW_ID}_1_sortmerna.fastq.gz" "${DATA_DIR}/${NEW_ID}_2_sortmerna.fastq.gz" \
-      --readFilesCommand zcat \
       --outFileNamePrefix "${TMP_DIR}/pe_" \
-      --outSAMtype BAM SortedByCoordinate \
-      --outSAMattrIHstart 0 \
-      --outSAMattributes NH HI AS nM NM \
-      --outSAMstrandField intronMotif
+      || { echo "ERROR: STAR PE failed for $NEW_ID" >&2; exit 1; }
 fi
 
-# --- 4. ALIGN SINGLE-END CLEAN READS ---
+# --- 4. SINGLE-END ---
 if [ -f "${DATA_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz" ]; then
     echo "Aligning Single-End non-rRNA reads for $NEW_ID..."
-    STAR \
-      --runThreadN "$THREADS" \
-      --genomeDir "$INDEX_DIR" \
+    STAR "${STAR_OPTS[@]}" \
       --readFilesIn "${DATA_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz" \
-      --readFilesCommand zcat \
       --outFileNamePrefix "${TMP_DIR}/se_" \
-      --outSAMtype BAM SortedByCoordinate \
-      --outSAMattrIHstart 0 \
-      --outSAMattributes NH HI AS nM NM \
-      --outSAMstrandField intronMotif
+      || { echo "ERROR: STAR SE failed for $NEW_ID" >&2; exit 1; }
 fi
 
 # --- 5. MERGE BAMS FOR DOWNSTREAM ncRNA ANALYSIS ---
@@ -84,14 +97,10 @@ else
 fi
 
 # Move and rename STAR final log files with sample ID
-for logfile in "${TMP_DIR}"/*Log.final.out; do
-    if [ -f "$logfile" ]; then
-        # Extracts 'pe' or 'se' prefix from the filename
-        prefix=$(basename "$logfile" | cut -d'_' -f1)
-        
-        # Output format: ${NEW_ID}_pe_Log.final.out or ${NEW_ID}_se_Log.final.out
-        mv "$logfile" "${OUT_DIR}/${NEW_ID}_${prefix}_Log.final.out"
-    fi
+for f in "${TMP_DIR}"/*_Log.final.out "${TMP_DIR}"/*_Log.out "${TMP_DIR}"/*_SJ.out.tab; do
+    [ -f "$f" ] || continue
+    b=$(basename "$f")                 # e.g. pe_Log.final.out
+    mv "$f" "${OUT_DIR}/${NEW_ID}_${b}"
 done
 
 # Clean up temp directory
