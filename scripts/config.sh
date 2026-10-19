@@ -44,9 +44,9 @@ BIND_DIR="${BASE}"
 ARRAY_DEP_TYPE="aftercorr"
 
 # ---- 3. Input files (live in BASE/SPEC/01_inputs/) -------------------------
-GENOME="${INPUT_ROOT}/${SPEC}.chromosomes.fa"   # Just the chromosome contigs- no unplaced sequences or mito/plastid assemblies
+GENOME="${INPUT_ROOT}/${SPEC}_genome.fasta"   # Just the chromosome contigs- no unplaced sequences or mito/plastid assemblies
 REF_ANN="${INPUT_ROOT}/${SPEC}_mRNA.gtf"      # this has to be a gtf file. convert using gffread -T
-TE_GFF3="${INPUT_ROOT}/${SPEC}_TE.gff3"   # Direct output from EDTA- rename for convenience
+TE_GFF3="${INPUT_ROOT}/${SPEC}_TEanno.gff3"   # Direct output from EDTA- rename for convenience
 METADATA="${INPUT_ROOT}/${SPEC}_metadata.txt" # TAB-delimited. Sequencing ID in column 1. a label designating tissue type and replicate number should be in column 2 (ie sdl_rt_2 or exp_lvs_1)
 RAW_FASTQ="${INPUT_ROOT}/raw_fastq"           # Directory containing raw FASTQ files
 
@@ -60,6 +60,7 @@ LNCBOOST_SIF="${IMG_DIR}/plant_lnc_boost.sif"
 # ---- 5. Step outputs, in pipeline order -------------------------------------
 # 00 STAR genomeGenerate  -> index (read by 05)
 STAR_INDEX="${INPUT_ROOT}/${SPEC}_indexed"
+INTRON_LIMITS="${INPUT_ROOT}/${SPEC}_intron_limits.txt"          # 00 also writes this (KEY=value lines, sourceable); 05 reads INTRON_LIMIT from it
 
 # 01 fastp                -> trimmed reads (read by 03, 04)
 FASTP_DIR="${OUTPUT_ROOT}/01_fastp"
