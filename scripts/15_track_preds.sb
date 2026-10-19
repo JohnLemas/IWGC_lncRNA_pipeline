@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=00:30:00
-#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+# NOTE: --output is NOT set here: submit_2_stringtie.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
@@ -14,14 +14,11 @@ set -euo pipefail
 # run right after 04_stringtie. intersect_classify.sb consumes the resulting
 # tracking summary TSV as an input to add the Tissue_Type column to its final table.
 
-BASE="/path/to/working/dir"
-SPEC="species"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 
-ASSEMBLY_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/sample_assemblies"
-OUT_DIR="${BASE}/${SPEC}/03_outputs/10_trace"
-REF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
-LIST="${OUT_DIR}/file_list.txt"
-METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
+OUT_DIR="$TRACE_DIR"
+REF="$CANDIDATES_GTF"
+LIST="$TRACE_LIST"
 
 mkdir -p $OUT_DIR
 
@@ -37,11 +34,10 @@ gffcompare -r $REF -i $LIST -o ${OUT_DIR}/candidate
 # ========>------- Parse the output files -------<======== #
 
 TRACK_FILE="${OUT_DIR}/candidate.tracking"
-TRACKING_SUMMARY="${OUT_DIR}/${SPEC}_tracking_summary.tsv"
 
-CANDIDATE_FASTA="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
+CANDIDATE_FASTA="$CANDIDATES_FASTA"
 
-IMAGE="${BASE}/images/rbio_tools.sif"
+IMAGE="$RBIO_SIF"
 
 cmd_track="singularity run $IMAGE track \
     -t \"$TRACK_FILE\" \

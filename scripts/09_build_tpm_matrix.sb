@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=00:30:00
-#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+# NOTE: --output is NOT set here: submit_2_stringtie.sh passes it (log dir from LOG_DIR in config.sh).
 
 # ========>------- Build the lncRNA TPM matrix -------<======== #
 # NOTE: Run this AFTER stringtie_quantify.sb has produced t_data.ctab for every
@@ -13,15 +13,11 @@
 # build_final_annotation.R) should join the resulting *.summary.tsv onto the final
 # table on transcript_id, the same way it already joins in the tracking summary.
 
-BASE="/path/to/working/dir"
-SPEC="species"
-IMAGE="${BASE}/images/rbio_tools.sif"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMAGE="$RBIO_SIF"
 
-QUANT_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie"
-CANDIDATES_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
-METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
-OUT_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie"
-OUT_PREFIX="${OUT_DIR}/${SPEC}_lncRNA_TPM"
+OUT_DIR="$STRINGTIE_DIR"
+OUT_PREFIX="$TPM_PREFIX"
 
 mkdir -p "$OUT_DIR"
 

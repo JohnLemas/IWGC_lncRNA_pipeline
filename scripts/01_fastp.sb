@@ -1,23 +1,22 @@
 #!/bin/bash --login
 #SBATCH --job-name=fastp
-#SBATCH --array=1-[number of samples from wc -l species_metadata.txt]
+#SBATCH --cpus-per-task=8   # fastp is run with --thread 8
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
-#SBATCH --output=/path/to/working/dir/species/logs/fastp/%x-%j_%a.SLURMout
+# NOTE: --array and --output are NOT set here: submit_1_raw_to_alignment.sh passes them (array size from METADATA, log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
 # 1. Paths & Variables
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species" # Set this to the species prefix for working directories and output files (ex: AmaTu=Amaranthus tuberculatus)
+# Paths - all defined in config.sh (RAW_FASTQ, FASTP_DIR, METADATA)
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"
 
-IN_DIR="${BASE}/${SPEC}/01_inputs/raw_fastq"
-OUT_DIR="${BASE}/${SPEC}/03_outputs/01_fastp"
+IN_DIR="$RAW_FASTQ"
+OUT_DIR="$FASTP_DIR"
 mkdir -p "$OUT_DIR"
 
 # Pull the sequencing ID and swap it for the new ID
 # make sure the column indices are correct- column 1 should be the sequencing ID and column 2 is the informative ID
-METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$METADATA" | tr -d '\r')
 OLD_ID=$(echo "$ROW" | awk -F'\t' '{print $1}')
 NEW_ID=$(echo "$ROW" | awk -F'\t' '{print $2}')

@@ -3,8 +3,8 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=16G
 #SBATCH --time=08:00:00
-#SBATCH --array=0-2 # runs QC on raw, trimmed, and clean reads in parallel
-#SBATCH --output=/path/to/project/dir/species/logs/%x-%A_%a.SLURMout
+#SBATCH --array=0-2
+# NOTE: --output is NOT set here: submit_1_raw_to_alignment.sh passes it (and submits each stage as its own job so each waits only on what it needs).
 
 # One array task per stage (0=raw, 1=trimmed, 2=clean) so they run in parallel
 # and a timeout in one stage can't stop the others from reaching MultiQC.
@@ -15,22 +15,21 @@ ml purge
 ml load FastQC/0.12.1-Java-11
 ml load MultiQC
 
-BASE="/path/to/project/dir" # change this to reflect your working directory
-SPEC="species"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 THREADS="${SLURM_CPUS_PER_TASK:-8}"
 
 case "${SLURM_ARRAY_TASK_ID}" in
   0) STAGE="raw"
-     IN="${BASE}/${SPEC}/01_inputs/raw_fastq"
-     OUT="${IN}/QC"
+     IN="$RAW_FASTQ"
+     OUT="$QC_RAW_DIR"
      NAME="raw_report" ;;
   1) STAGE="trimmed"
-     IN="${BASE}/${SPEC}/03_outputs/01_fastp"
-     OUT="${IN}/QC"
+     IN="$FASTP_DIR"
+     OUT="$QC_TRIM_DIR"
      NAME="trimmed_report" ;;
   2) STAGE="clean"
-     IN="${BASE}/${SPEC}/03_outputs/02_sortmerna/clean_reads"
-     OUT="${BASE}/${SPEC}/03_outputs/02_sortmerna/QC"
+     IN="$SMR_CLEAN_DIR"
+     OUT="$QC_CLEAN_DIR"
      NAME="clean_reads" ;;
   *) echo "Unexpected array index: ${SLURM_ARRAY_TASK_ID}" >&2; exit 1 ;;
 esac

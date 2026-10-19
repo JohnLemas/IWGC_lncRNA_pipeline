@@ -3,21 +3,21 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
-#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+# NOTE: --output is NOT set here: submit_2_stringtie.sh passes it (log dir from LOG_DIR in config.sh).
 
 # ========>-------- Merge assembled GTF files from StringTie into a master GTF file --------<======== #
 
 # 1. Paths
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 
 # Inputs
-GTF_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/SRR_assemblies"
-REF_GTF="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
-OUT_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_denovo_trans.gtf"
+GTF_DIR="$ASSEMBLY_DIR"
+REF_GTF="$REF_ANN"
+OUT_GTF="$MERGED_GTF"
 
 # Load the file IDs into a Bash array
-mapfile -t SAMPLE_IDS < <(cut -f 2 "${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt")
+# column 2 = informative sample ID (same column 06 uses to name its assemblies)
+mapfile -t SAMPLE_IDS < <(cut -f 2 "$METADATA" | tr -d '\r')
 
 # Create the list of GTF file paths
 gtf_filePath=()
@@ -31,6 +31,11 @@ for ID in "${SAMPLE_IDS[@]}"; do
     fi
 done
 
+if (( ${#gtf_filePath[@]} == 0 )); then
+    echo "ERROR: no *_assembled.gtf files found in ${GTF_DIR}" >&2
+    exit 1
+fi
+
 ml purge
 ml load StringTie/2.2.1-GCC-11.2.0-Python-2.7.18
 
@@ -39,16 +44,14 @@ ml load StringTie/2.2.1-GCC-11.2.0-Python-2.7.18
 # -G: Your original reference (keeps known gene names)
 # -o: The final master file
 # -m: Minimum transcript length to include in the master (200bp)
-stringtie --merge -G "$REF_GTF" -m 200 -o "$OUT_GTF" "${gtf_filePath[@]}" || { echo "ERROR: stringtie --merge failed" >&2; exit 1; }
-[ -s "$OUT_GTF" ] || { echo "ERROR: $OUT_GTF is empty" >&2; exit 1; }
+stringtie --merge -G $REF_GTF -m 200 -o $OUT_GTF ${gtf_filePath[*]}
 
 echo "Master Merge Complete: $OUT_GTF"
 
 # ========>-------- Extract the transcript sequences from the master GTF file --------<======== #
 
-CAN_GTF="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.gtf"
-SEQ_OUT="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
-GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa"
+CAN_GTF="$CANDIDATES_GTF"
+SEQ_OUT="$CANDIDATES_FASTA"
 
 echo -e "Extracting candidate transcript sequences from $(basename $OUT_GTF)...\n"
 

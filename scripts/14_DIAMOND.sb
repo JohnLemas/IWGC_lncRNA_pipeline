@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
 #SBATCH --time=02:00:00 # DIAMOND is super fast
-#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+# NOTE: --output is NOT set here: submit_3_model_predictions.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
@@ -11,15 +11,14 @@ set -euo pipefail
 ml purge
 ml load DIAMOND/2.1.8-GCC-12.3.0 # this is the current module for use in MSU HPCC
 
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 
 # Load input files
 echo -e ">>>DIAMOND:\n...loading input files and database.."
-INPUT="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta" # this is the fasta file of candidate lncRNA sequences obtained from gffread -w ${SPEC}_candidates.fasta -g ${SPEC}_genome.fa ${SPEC}_candidates.gtf
-OUTDIR="${BASE}/${SPEC}/03_outputs/09_diamond"
-OUTPUT="${OUTDIR}/${SPEC}_diamond_out.txt" # make sure this has your desired species prefix
-DB="${BASE}/databases/uniprot_db/uniprot_out.dmnd" # this is the DIAMOND-formatted database created from the uniprot_sprot.fasta file using diamond makedb --in uniprot_sprot.fasta -d uniprot_out.dmnd
+INPUT="$CANDIDATES_FASTA"   # candidate lncRNA sequences (gffread -w output from step 07)
+OUTDIR="$DIAMOND_DIR"
+OUTPUT="$DIAMOND_OUT"
+DB="$DIAMOND_DB"   # DIAMOND-formatted UniProt db (see config.sh)
 
 echo -e ">>>DIAMOND:\nDatabase:\n\t${DB}\nInput sequences:\n\t${INPUT}"
 

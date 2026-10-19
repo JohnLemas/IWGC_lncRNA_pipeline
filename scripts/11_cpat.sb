@@ -3,23 +3,22 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
 #SBATCH --time=01:00:00
-#SBATCH --output=/path/to/working/dir/species/logs/%x-%j.out
+# NOTE: --output is NOT set here: submit_3_model_predictions.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
 # Paths
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species"
-IMAGE="${BASE}/images/cpat_plant.sif" # path to cpat image
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMAGE="$CPAT_SIF"
 
 echo -e ">>>CPAT-plant:\n..loading image and data.."
 
 # Inputs
-SEQS="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta" # fasta file obtained from gffread -w ${SPEC}_candidates.fasta -g ${SPEC}_genome.fa ${SPEC}_candidates.gtf
-HEX="${BASE}/scripts/Plant-LncRNA-pipeline-v2/Model/Plant_Hexamer.tsv" # this is the hexamer table provided by Plant-LncPipe Github Repo
-LOGIT="${BASE}/scripts/Plant.logit.v2.RData" # also provided by Plant-LncPipe Github Repo, but wrong version. Re-saved to work with cpat.sif- use this one.
-OUT_DIR="${BASE}/${SPEC}/03_outputs/06_cpat"
-OUT_ALL="${OUT_DIR}/${SPEC}_cpat.output" # make sure this has your desired species prefix
+SEQS="$CANDIDATES_FASTA"
+HEX="$CPAT_HEXAMER"
+LOGIT="$CPAT_LOGIT"
+OUT_DIR="$CPAT_DIR"
+OUT_ALL="$CPAT_OUT"
 
 echo -e "..creating output directory:\n\t${OUT_DIR}"
 mkdir -p $OUT_DIR

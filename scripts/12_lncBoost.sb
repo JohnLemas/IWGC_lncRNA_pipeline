@@ -3,34 +3,33 @@
 #SBATCH --cpus-per-task=20
 #SBATCH --mem=64G
 #SBATCH --time=02:00:00
-#SBATCH --output=//path/to/working/dir/species/logs/%x_%j.out
+# NOTE: --output is NOT set here: submit_3_model_predictions.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 date
 
 # --- Paths ---
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species"
-IMAGE="${BASE}/images/plant_lnc_boost.sif" # dedicated image for this step
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMAGE="$LNCBOOST_SIF"
 
-SCRIPT_DIR="${BASE}/scripts/Plant-LncRNA-pipeline-v2/PlantLncBoost/Script" # contains both Feature_extraction.py and PlantLncBoost_prediction.py
-MODEL="${BASE}/scripts/Plant-LncRNA-pipeline-v2/Model/PlantLncBoost_model.cb" # pre-trained model for plant lncRNA prediction
+SCRIPT_DIR="$LNCBOOST_SCRIPT_DIR"   # contains Feature_extraction.py and PlantLncBoost_prediction.py
+MODEL="$LNCBOOST_MODEL"
 
-INPUT_FASTA="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta" # input fasta file containing candidate lncRNA sequences
-OUT_DIR="${BASE}/${SPEC}/03_outputs/07_lncBoost"
-FEATURE_CSV="${OUT_DIR}/${SPEC}_features.csv" # make sure this matches your desired species prefix
-FINAL_RESULTS="${OUT_DIR}/${SPEC}_predictions.txt" # make sure this matches your desired species prefix
+INPUT_FASTA="$CANDIDATES_FASTA"
+OUT_DIR="$LNCBOOST_DIR"
+FEATURE_CSV="$LNCBOOST_FEATURES"
+FINAL_RESULTS="$LNCBOOST_PREDS"
 
 mkdir -p ${OUT_DIR}
 
 # --- STEP 1: Feature Extraction ---
 echo "Starting Feature Extraction..."
-singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
+singularity exec -B "$BIND_DIR" $IMAGE \
     python3 ${SCRIPT_DIR}/Feature_extraction.py -i $INPUT_FASTA -o $FEATURE_CSV
 
 # --- STEP 2: Prediction ---
 echo "...feature extraction complete.\nStarting Prediction..."
-singularity exec -B /mnt/scratch/lemasjoh $IMAGE \
+singularity exec -B "$BIND_DIR" $IMAGE \
     python3 ${SCRIPT_DIR}/PlantLncBoost_prediction.py \
     -i $FEATURE_CSV \
     -m $MODEL \

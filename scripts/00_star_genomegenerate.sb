@@ -4,21 +4,14 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=45G
 #SBATCH --time=01:30:00
-#SBATCH --output=/path/to/working/dir/species/logs/%x-%j.SLURMout
+# NOTE: --output is NOT set here: submit_1_raw_to_alignment.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
-# Paths
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species" 
-
-# Inputs and outputs
-GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa" 
-ANNO="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
-INDEX="${BASE}/${SPEC}/01_inputs/${SPEC}_indexed"
-OUT="$BASE/$SPEC/01_inputs/${SPEC}_intron_limits.txt"
-
-# ------ STAR Genome Generation ------ #
+# Paths - all defined in config.sh (GENOME, REF_ANN, STAR_INDEX)
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"
+ANNO="$REF_ANN"
+INDEX="$STAR_INDEX"
 
 echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annotation:\n\t${ANNO}"
 
@@ -35,29 +28,8 @@ STAR \
      --genomeDir $INDEX \
      --genomeFastaFiles $GENOME \
      --sjdbGTFfile $ANNO \
-     --sjdbGTFtagExonParentTranscript transcript_id \
+     --sjdbGTFtagExonParentTranscript Parent \
      --sjdbOverhang 99 \
      --genomeSAindexNbases 13
 
 echo -e "..process complete. Indexed genome is in\n\t${INDEX}"
-
-# ------ Intron Limits Investigation ------ #
-# This bash script investigates intron length limits based on the splicing junctions in the STAR index.
-# This is used downstream in the STAR alignment process to set intron length limits.
-# Without this, STAR may not correctly handle long introns during alignment.
-# If you are hitting OOM kill events in StringTie Assembly, double check that the intron limits are set correctly.
-
-echo -e ">>>STAR:\n\tInvestigating intron limits.\nIndex directory:\n\t${INDEX}\nOutput file:\n\t${OUT}"
-
-[ -s "$INDEX/sjdbList.out.tab" ] || { echo "ERROR: no sjdbList.out.tab in $INDEX"; exit 1; }
-
-awk '{print $3-$2+1}' "$INDEX/sjdbList.out.tab" | sort -n | awk '
-  function q(p,   i){i=int(NR*p); if(i<1) i=1; return a[i]}
-  {a[NR]=$1}
-  END{
-    p9999=q(0.9999); lim=(int(p9999/1000)+1)*1000
-    for(i=1;i<=NR;i++) if(a[i]>lim) over++
-    printf "N_JUNC=%d\nINTRON_P999=%d\nINTRON_P9999=%d\nINTRON_MAX_ANNOT=%d\nINTRON_LIMIT=%d\nN_JUNC_ABOVE_LIMIT=%d\n", NR, q(0.999), p9999, a[NR], lim, over+0
-  }' > "$OUT"
-
-echo -e ">>>STAR:\n\tIntron limits investigation complete. Results written to\n\t${OUT}"

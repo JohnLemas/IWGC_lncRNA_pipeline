@@ -3,24 +3,23 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
 #SBATCH --time=12:00:00
-#SBATCH --output=/path/to/working/dir/species/logs/%x_%j.out
+# NOTE: --output is NOT set here: submit_3_model_predictions.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
 # Paths
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species"
-IMAGE="${BASE}/images/rbio_tools.sif"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMAGE="$RBIO_SIF"
 
 # Inputs
-OUTPUT_DIR="${BASE}/${SPEC}/03_outputs/08_lncFinder"
-INPUT_FASTA="${BASE}/${SPEC}/03_outputs/04_stringtie/${SPEC}_candidates.fasta"
-OUTPUT_CSV="${OUTPUT_DIR}/${SPEC}_lncFinder_results.csv"
+OUTPUT_DIR="$LNCFINDER_DIR"
+INPUT_FASTA="$CANDIDATES_FASTA"
+OUTPUT_CSV="$LNCFINDER_CSV"
 
 mkdir -p ${OUTPUT_DIR}
 
 #lncFinder model designation: wheat, human, mouse
-MODEL_TYPE="wheat"
+MODEL_TYPE="$LNCFINDER_MODEL"   # set in config.sh: wheat, human, mouse
 
 mkdir -p $OUTPUT_DIR
 
@@ -35,7 +34,7 @@ date
 
 # Run the unified R script inside the container
 singularity run \
-    --bind /mnt/scratch/lemasjoh \
+    --bind "$BIND_DIR" \
     "$IMAGE" lnc_predict \
     --fasta "$INPUT_FASTA" \
     --out "$OUTPUT_CSV" \

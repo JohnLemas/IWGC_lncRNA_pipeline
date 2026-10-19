@@ -1,24 +1,21 @@
 #!/bin/bash --login
 #SBATCH --job-name=strg_assemble
-#SBATCH --array=1-[number of samples from wc -l species_metadata.txt]
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
-#SBATCH --output=/path/to/working/dir/species/logs/stringtie/%x_%a.out
+# NOTE: --array and --output are NOT set here: submit_2_stringtie.sh passes them (array size from METADATA, log dir from LOG_DIR in config.sh).
 
 # 1. Paths
-BASE="/path/to/working/dir" # change this to reflect your working directory
-SPEC="species"
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
-METADATA="${BASE}/${SPEC}/01_inputs/${SPEC}_metadata.txt"
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$METADATA" | tr -d '\r')
 ID=$(echo "$ROW" | awk -F'\t' '{print $2}')
 
 # Input BAM directory
-BAM_DIR="${BASE}/${SPEC}/03_outputs/03_STAR"
-REF_GTF="${BASE}/${SPEC}/01_inputs/${SPEC}_mRNA.gtf"
-OUT_DIR="${BASE}/${SPEC}/03_outputs/04_stringtie/SRR_assemblies"
+BAM_DIR="$STAR_DIR"
+REF_GTF="$REF_ANN"
+OUT_DIR="$ASSEMBLY_DIR"
 
 mkdir -p $OUT_DIR
 

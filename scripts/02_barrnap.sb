@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
 #SBATCH --time=00:30:00 # barrnap runs pretty quick
-#SBATCH --output=/path/to/working/dir/species/logs/sortmerna/%x_%j.out # change this to reflect your working directory
+# NOTE: --output is NOT set here: submit_1_raw_to_alignment.sh passes it (log dir from LOG_DIR in config.sh).
 
 set -euo pipefail
 
@@ -11,27 +11,26 @@ set -euo pipefail
 # USER-CONFIGURABLE SETTINGS
 # ----------------------------------------------------------------------------
 
-BASE="/path/to/working/dir" # also change this to reflect your working directory
-SPEC="species" # Set this to the species prefix for working directories and output files (ex: AmaTu=Amaranthus tuberculatus)
-SIF="${BASE}/images/sortmerna.sif"
-GENOME="${BASE}/${SPEC}/01_inputs/${SPEC}.chromosomes.fa" # make sure this mathces the genome file
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths below come from config.sh
+SIF="$SMR_SIF"
+# GENOME comes from config.sh
 
 # This must be the SAME default SortMeRNA database file that sortmerna.sb points
 # its DEFAULT variable at - the index built below is only valid for this exact
 # pair of reference files, in this exact order.
-DEFAULT_DB="${BASE}/databases/smr_v4.3_default_db.fasta"
+DEFAULT_DB="$SMR_DEFAULT_DB"
 
 KINGDOMS=(bac euk mito) # this runs all three models to capture nuclear, mitochondrial, and chloroplast rRNA genes
 
-OUTDIR="${BASE}/databases/${SPEC}_barrnap"
+OUTDIR="$BARRNAP_DIR"
 mkdir -p "${OUTDIR}"
 
 THREADS=${SLURM_CPUS_PER_TASK:-8}
 CDHIT_IDENTITY=0.97
 
 COMBINED_FASTA="${OUTDIR}/combined_rrna.fasta"
-CUSTOM_DB="${OUTDIR}/custom_db.fasta"
-INDEX_DIR="${OUTDIR}/idx"
+CUSTOM_DB="$SMR_CUSTOM_DB"
+INDEX_DIR="$SMR_IDX_DIR"
 
 # ----------------------------------------------------------------------------
 # STEP 1: Run barrnap on the genome, once per kingdom, via the image
