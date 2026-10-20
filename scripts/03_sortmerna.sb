@@ -1,19 +1,22 @@
 #!/bin/bash --login
-#SBATCH --job-name=species_sortmerna
+#SBATCH --job-name=sortmerna
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=48G
 #SBATCH --time=16:00:00
 # NOTE: --array and --output are NOT set here: submit_1_raw_to_alignment.sh passes them (array size from METADATA, log dir from LOG_DIR in config.sh).
 
-# NOTE: --array upper bound must equal the number of rows in the metadata file.
-# Check with:  awk 'END{print NR}' A_tha_metadata.txt   (wc -l undercounts if the
-# last line has no trailing newline).
+# NOTE: the array upper bound must equal the number of rows in the metadata file
+# (the submit script computes it with awk 'END{print NR}').
 #
 # NOTE ON RESOURCES: mem/time here were sized to cover per-task indexing.
-# Now that this script uses the shared index built by barrnap.sb (--idx-dir,
+# Now that this script uses the shared index built by 02_barrnap.sb (--idx-dir,
 # --index 0 below), each task only aligns - it doesn't rebuild the index - so
 # you can likely lower --mem and --time once you've confirmed a couple of
 # tasks run cleanly under the new setup.
+#
+# NOTE ON DISK: every task writes its decompressed reads to scratch (roughly 3-4x the
+# size of the .fastq.gz, e.g. ~12 GB for a 36M-read sample) and deletes them on exit.
+# To limit how many tasks do this at once, submit with a throttle, e.g. --array=1-107%10.
 
 set -uo pipefail
 # Not using -e globally: we want explicit exit-code checks around sortmerna
@@ -42,7 +45,7 @@ FAILED_DIR="$SMR_FAILED_DIR"
 
 mkdir -p "$CLEAN_DIR" "$RRNA_DIR" "$FAILED_DIR"
 
-# Container image - same one barrnap.sb uses, so indexing and alignment run
+# Container image - same one 02_barrnap.sb uses, so indexing and alignment run
 # against the identical SortMeRNA build/version.
 SIF="$SMR_SIF"
 
@@ -50,10 +53,10 @@ SIF="$SMR_SIF"
 DEFAULT="$SMR_DEFAULT_DB"
 CUSTOM="$SMR_CUSTOM_DB"
 
-# Shared index built once by barrnap.sb (Step 4) covering BOTH DEFAULT and
-# CUSTOM above, in that order. Must match barrnap.sb's INDEX_DIR exactly, and
-# DEFAULT/CUSTOM above must match barrnap.sb's DEFAULT_DB/CUSTOM_DB exactly -
-# SortMeRNA validates the index against the specific ref files/order given.
+# Shared index built once by 02_barrnap.sb (Step 4) covering BOTH DEFAULT and
+# CUSTOM above, in that order. SortMeRNA validates the index against the
+# specific ref files/order given, so these must match 02_barrnap.sb exactly
+# (they do automatically - both read them from config.sh).
 SHARED_IDX_DIR="$SMR_IDX_DIR"
 
 # 2. Environment Setup
@@ -63,6 +66,65 @@ echo "=========================================================="
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $NEW_ID ($OLD_ID)"
 echo "Start time: $(date)"
 echo "=========================================================="
+
+# 2b. Temp directory for decompressed reads + pigz
+#     SortMeRNA 4.3's built-in indexed gzip reader aborts on some large/multi-member
+#     .gz files (std::runtime_error: inflate wrapper offset ... does not match).
+#     To avoid it, every sample is decompressed with pigz into a per-task temp dir
+#     inside the working directory and SortMeRNA is given plain FASTQ.
+#     The original .fastq.gz inputs in IN_DIR are never modified or deleted.
+TMP_DIR="${OUT_DIR}/tmp_decompressed_${NEW_ID}_${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-nojob}}_${SLURM_ARRAY_TASK_ID}"
+
+cleanup_tmp () {
+    # Runs on ANY exit (success, error, scancel, walltime SIGTERM) via trap below.
+    if [ -n "${TMP_DIR:-}" ] && [ -d "$TMP_DIR" ]; then
+        echo "Cleaning up temp directory: $TMP_DIR"
+        rm -rf "$TMP_DIR"
+    fi
+}
+trap cleanup_tmp EXIT
+# Convert termination signals into a normal exit so the EXIT trap fires.
+trap 'echo "Received termination signal - exiting."; exit 143' TERM INT
+
+# Start from a clean temp dir in case a hard-killed earlier task left one behind
+rm -rf "$TMP_DIR"
+mkdir -p "$TMP_DIR"
+
+ml purge
+ml load pigz
+
+decompress_fastq () {
+    # $1 = input .fastq.gz (left untouched), $2 = output plain .fastq path
+    local IN="$1"
+    local OUT="$2"
+    echo "Decompressing $(basename "$IN") -> $OUT"
+    if ! pigz -dc -p "$THREADS" "$IN" > "$OUT"; then
+        echo "ERROR: pigz failed to decompress $IN"
+        return 1
+    fi
+    if [ ! -s "$OUT" ]; then
+        echo "ERROR: decompressed file is empty: $OUT"
+        return 1
+    fi
+    return 0
+}
+
+compress_outputs () {
+    # SortMeRNA writes uncompressed .fq outputs when given plain FASTQ input
+    # (it only emits .fq.gz when the input was gzipped). Re-compress every
+    # output for this sample so downstream steps and file names are unchanged.
+    # $@ = output prefixes (the --aligned / --other values)
+    local PREFIX f
+    for PREFIX in "$@"; do
+        for f in "${PREFIX}".fq "${PREFIX}"_fwd.fq "${PREFIX}"_rev.fq; do
+            if [ -f "$f" ]; then
+                echo "Compressing $(basename "$f")"
+                pigz -f -p "$THREADS" "$f" || { echo "ERROR: pigz failed on $f"; return 1; }
+            fi
+        done
+    done
+    return 0
+}
 
 run_sortmerna_and_check () {
     # $1 = workdir, $2 = descriptive label for logging (pe/se)
@@ -123,21 +185,30 @@ if [ -f "$PE_R1" ] && [ -f "$PE_R2" ]; then
 
     # ---- Paired-end ----
     WORKDIR="${OUT_DIR}/workdir_pe_${NEW_ID}"
+    PE_R1_FQ="${TMP_DIR}/${NEW_ID}_1_trim.fastq"
+    PE_R2_FQ="${TMP_DIR}/${NEW_ID}_2_trim.fastq"
+
+    if ! { decompress_fastq "$PE_R1" "$PE_R1_FQ" && decompress_fastq "$PE_R2" "$PE_R2_FQ"; }; then
+        echo "ERROR: decompression failed for $NEW_ID (PE)."
+        echo "Finished $NEW_ID with status 1 at $(date)"
+        exit 1
+    fi
 
     if run_sortmerna_and_check "$WORKDIR" "pe" \
         --ref "${DEFAULT}" \
         --ref "${CUSTOM}" \
         --idx-dir "${SHARED_IDX_DIR}" \
         --index 0 \
-        --reads "$PE_R1" \
-        --reads "$PE_R2" \
+        --reads "$PE_R1_FQ" \
+        --reads "$PE_R2_FQ" \
         --aligned "${RRNA_DIR}/${NEW_ID}_pe_rRNA" \
         --other "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA" \
         --paired_in \
         --out2 \
         --fastx
     then
-        if verify_log_complete "${RRNA_DIR}/${NEW_ID}_pe_rRNA.log"; then
+        if verify_log_complete "${RRNA_DIR}/${NEW_ID}_pe_rRNA.log" \
+           && compress_outputs "${RRNA_DIR}/${NEW_ID}_pe_rRNA" "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA"; then
             # Confirm the output files actually exist and are non-empty
             # before declaring success and deleting the workdir.
             if [ -s "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_fwd.fq.gz" ] && [ -s "${CLEAN_DIR}/${NEW_ID}_pe_non_rRNA_rev.fq.gz" ]; then
@@ -161,18 +232,26 @@ elif [ -f "$SE_READS" ]; then
 
     # ---- Single-end ----
     WORKDIR="${OUT_DIR}/workdir_se_${NEW_ID}"
+    SE_READS_FQ="${TMP_DIR}/${NEW_ID}_trim.fastq"
+
+    if ! decompress_fastq "$SE_READS" "$SE_READS_FQ"; then
+        echo "ERROR: decompression failed for $NEW_ID (SE)."
+        echo "Finished $NEW_ID with status 1 at $(date)"
+        exit 1
+    fi
 
     if run_sortmerna_and_check "$WORKDIR" "se" \
         --ref "${DEFAULT}" \
         --ref "${CUSTOM}" \
         --idx-dir "${SHARED_IDX_DIR}" \
         --index 0 \
-        --reads "$SE_READS" \
+        --reads "$SE_READS_FQ" \
         --aligned "${RRNA_DIR}/${NEW_ID}_se_rRNA" \
         --other "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA" \
         --fastx
     then
-        if verify_log_complete "${RRNA_DIR}/${NEW_ID}_se_rRNA.log"; then
+        if verify_log_complete "${RRNA_DIR}/${NEW_ID}_se_rRNA.log" \
+           && compress_outputs "${RRNA_DIR}/${NEW_ID}_se_rRNA" "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA"; then
             if [ -s "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA.fq.gz" ]; then
                 mv "${CLEAN_DIR}/${NEW_ID}_se_non_rRNA.fq.gz" "${CLEAN_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz"
                 echo "SE clean reads written for $NEW_ID."
