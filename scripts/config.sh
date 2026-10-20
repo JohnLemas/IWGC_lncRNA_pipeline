@@ -49,6 +49,11 @@ REF_ANN="${INPUT_ROOT}/${SPEC}_mRNA.gtf"      # this has to be a gtf file. conve
 TE_GFF3="${INPUT_ROOT}/${SPEC}_TEanno.gff3"   # Direct output from EDTA- rename for convenience
 METADATA="${INPUT_ROOT}/${SPEC}_metadata.txt" # TAB-delimited. Sequencing ID in column 1. a label designating tissue type and replicate number should be in column 2 (ie sdl_rt_2 or exp_lvs_1)
 RAW_FASTQ="${INPUT_ROOT}/raw_fastq"           # Directory containing raw FASTQ files
+# Genome that barrnap scans for rRNA genes (step 02). Point this at the full NCBI datasets assembly
+# (nuclear + organelles + unplaced) so mito/plastid rRNA ends up in the custom SortMeRNA db.
+# A single fasta; .gz is fine. Defaults to GENOME until you set it, e.g.:
+#   BARRNAP_GENOME="${INPUT_ROOT}/ncbi_dataset/data/GCF_XXXXXXXXX.X/GCF_XXXXXXXXX.X_genomic.fna"
+BARRNAP_GENOME="${GENOME}"
 
 # ---- 4. Containers / databases ----------------------------------------------
 SMR_SIF="${IMG_DIR}/sortmerna.sif"            # also runs barrnap (02) and sortmerna (02, 03)

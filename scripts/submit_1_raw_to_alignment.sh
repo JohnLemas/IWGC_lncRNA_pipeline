@@ -21,6 +21,7 @@ parse_flags "$@"
 # ---- preflight ----
 count_samples
 need_file "$GENOME"          "genome fasta (config: GENOME)"
+need_file "$BARRNAP_GENOME"  "genome for barrnap (config: BARRNAP_GENOME)"
 need_file "$REF_ANN"         "mRNA GTF (config: REF_ANN)"
 need_dir  "$RAW_FASTQ"       "raw fastq directory (config: RAW_FASTQ)"
 need_file "$SMR_SIF"         "sortmerna/barrnap image (config: SMR_SIF)"

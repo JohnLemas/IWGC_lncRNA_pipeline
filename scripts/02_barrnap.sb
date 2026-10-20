@@ -13,7 +13,7 @@ set -euo pipefail
 
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths below come from config.sh
 SIF="$SMR_SIF"
-# GENOME comes from config.sh
+# BARRNAP_GENOME (full NCBI assembly) comes from config.sh; GENOME is only used by the STAR/lncRNA steps
 
 # This must be the SAME default SortMeRNA database file that sortmerna.sb points
 # its DEFAULT variable at - the index built below is only valid for this exact
@@ -36,11 +36,22 @@ INDEX_DIR="$SMR_IDX_DIR"
 # STEP 1: Run barrnap on the genome, once per kingdom, via the image
 # ----------------------------------------------------------------------------
 
-filename=$(basename "${GENOME}")
-name="${filename%.*}"
-GENOME_DIR=$(dirname "${GENOME}")
+name="${SPEC}"
+GENOME_DIR=$(dirname "${BARRNAP_GENOME}")
 
-echo "[$(date)] Running barrnap for kingdoms: ${KINGDOMS[*]} on ${GENOME}"
+echo "[$(date)] Running barrnap for kingdoms: ${KINGDOMS[*]} on ${BARRNAP_GENOME}"
+
+# Some assemblies start with a long telomere repeat, (CCCTAAA)n, which contains no G.
+# HMMER guesses the alphabet from the first ~4 kb of the file; with only A/C/T it cannot tell
+# DNA from protein ("Unable to guess alphabet") and nhmmer aborts. Prepend a short, balanced
+# dummy record so the guess succeeds. It cannot produce rRNA hits and does not shift any
+# real contig's coordinates. The padded copy is deleted after barrnap finishes.
+BARRNAP_INPUT="${OUTDIR}/${name}_barrnap_input.fa"
+{
+    echo ">alphabet_guess_pad"
+    printf 'ACGT%.0s' $(seq 1 1200); echo
+    zcat -f "${BARRNAP_GENOME}"   # works for plain or .gz fasta
+} > "${BARRNAP_INPUT}"
 
 KINGDOM_FASTAS=()
 
@@ -55,9 +66,11 @@ for kingdom in "${KINGDOMS[@]}"; do
             --kingdom "${kingdom}" \
             --threads "${THREADS}" \
             --outseq "${out_fasta}" \
-            "${GENOME}" \
+            "${BARRNAP_INPUT}" \
         > "${OUTDIR}/${name}_${kingdom}_rrna.gff"
 done
+
+rm -f "${BARRNAP_INPUT}"
 
 # ----------------------------------------------------------------------------
 # STEP 2: Concatenate all per-kingdom rRNA FASTA outputs
