@@ -34,10 +34,20 @@ cmd="stringtie \
     -p $SLURM_CPUS_PER_TASK \
     -m 200 \
     -j 2 \
-    -o ${OUT_DIR}/${ID}_assembled.gtf"
+    -o ${OUT_DIR}/${ID}_assembled.gtf.partial"
 
 echo -e "..running command:\n${cmd}\n\n"
 
 $cmd
+STATUS=$?
+
+# The submit scripts treat a non-empty ${ID}_assembled.gtf as "done", so it only appears once
+# StringTie has finished cleanly (a killed/failed task leaves at most a .partial file).
+if [ $STATUS -ne 0 ] || [ ! -s "${OUT_DIR}/${ID}_assembled.gtf.partial" ]; then
+    echo "ERROR: StringTie failed for $ID (exit status $STATUS) or produced no output" >&2
+    rm -f "${OUT_DIR}/${ID}_assembled.gtf.partial"
+    exit 1
+fi
+mv "${OUT_DIR}/${ID}_assembled.gtf.partial" "${OUT_DIR}/${ID}_assembled.gtf"
 
 echo "StringTie assembly for $ID complete."

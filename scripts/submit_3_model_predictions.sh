@@ -1,24 +1,18 @@
 #!/bin/bash
-# Phase 3 - coding-potential / lncRNA prediction models. All five run in parallel on the candidate set.
+# Phase 3 - coding-potential / lncRNA prediction models. All five need only the candidate set from step 07,
+# so one run submits all of them.
 #
-#   07 merge (phase 2) ─┬─> 10 FEELnc filter
-#                       ├─> 11 CPAT-plant
-#                       ├─> 12 PlantLncBoost
-#                       ├─> 13 LncFinder
-#                       └─> 14 DIAMOND blastx vs UniProt
+#   10 FEELnc filter   11 CPAT-plant   12 PlantLncBoost   13 LncFinder   14 DIAMOND blastx vs UniProt
 #
-# Usage: ./submit_3_model_predictions.sh [--dry-run] [--standalone]
-#   --dry-run     run the checks and print the sbatch commands without submitting
-#   --standalone  do not wait on phase 2 (use when the candidate GTF/fasta already exist)
+# Usage: bash submit_3_model_predictions.sh [--dry-run]
+#   --dry-run  show what would be submitted without submitting
 #
-# Dependencies: every model = afterok(07 merge)
+# No job-ID dependencies. Re-run it after a failure: finished models are skipped, only missing ones resubmit.
 
-set -euo pipefail
+set -eo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/submit_lib.sh"
 parse_flags "$@"
-load_upstream phase2
 
-# ---- preflight (only things that exist before the jobs run) ----
 need_file "$REF_ANN"             "mRNA GTF (config: REF_ANN)"
 need_file "$FEELNC_SIF"          "FEELnc image"
 need_dir  "$FEELNC_HOME"         "FEELnc install (config: FEELNC_HOME)"
@@ -30,20 +24,12 @@ need_dir  "$LNCBOOST_SCRIPT_DIR" "PlantLncBoost scripts"
 need_file "$LNCBOOST_MODEL"      "PlantLncBoost model"
 need_file "$RBIO_SIF"            "R tools image (LncFinder)"
 need_file "$DIAMOND_DB"          "DIAMOND UniProt db"
-if (( STANDALONE )); then
-    need_file "$CANDIDATES_GTF"   "candidate GTF from step 07"
-    need_file "$CANDIDATES_FASTA" "candidate fasta from step 07"
-fi
 preflight_done
 
-# ---- submit ----
-DEP=$(dep "afterok:${MERGE_JOB:-}")
-FEELNC_JOB=$(submit    10_FEELnc_filter.sb feelnc    ${DEP:+"$DEP"})
-CPAT_JOB=$(submit      11_cpat.sb          cpat      ${DEP:+"$DEP"})
-LNCBOOST_JOB=$(submit  12_lncBoost.sb      lncboost  ${DEP:+"$DEP"})
-LNCFINDER_JOB=$(submit 13_lncFinder.sb     lncfinder ${DEP:+"$DEP"})
-DIAMOND_JOB=$(submit   14_DIAMOND.sb       diamond   ${DEP:+"$DEP"})
+step_single feelnc    10_FEELnc_filter.sb feelnc    --done "$FEELNC_GTF"      --need "$CANDIDATES_GTF" "$REF_ANN"
+step_single cpat      11_cpat.sb          cpat      --done "$CPAT_OUT"        --need "$CANDIDATES_FASTA"
+step_single lncboost  12_lncBoost.sb      lncboost  --done "$LNCBOOST_PREDS"  --need "$CANDIDATES_FASTA"
+step_single lncfinder 13_lncFinder.sb     lncfinder --done "$LNCFINDER_CSV"   --need "$CANDIDATES_FASTA"
+step_single diamond   14_DIAMOND.sb       diamond   --done "$DIAMOND_OUT"     --need "$CANDIDATES_FASTA" "$DIAMOND_DB"
 
-save_ids phase3 FEELNC_JOB CPAT_JOB LNCBOOST_JOB LNCFINDER_JOB DIAMOND_JOB
-info "Phase 3 submitted (5 parallel jobs)."
-monitor_hint
+print_status

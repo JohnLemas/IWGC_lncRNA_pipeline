@@ -43,5 +43,13 @@ cmd="stringtie \
 echo -e "..running command:\n${cmd}\n\n"
 
 $cmd
+STATUS=$?
+
+# The submit scripts treat ${ID}_quant.gtf + t_data.ctab as "done": don't leave them behind after a failure.
+if [ $STATUS -ne 0 ] || [ ! -s "${OUT_DIR}/${ID}_quant.gtf" ] || [ ! -s "${OUT_DIR}/t_data.ctab" ]; then
+    echo "ERROR: StringTie quantification failed for $ID (exit status $STATUS)" >&2
+    rm -f "${OUT_DIR}/${ID}_quant.gtf" "${OUT_DIR}/t_data.ctab"
+    exit 1
+fi
 
 echo "StringTie TPM quantification for $ID complete: ${OUT_DIR}/t_data.ctab"

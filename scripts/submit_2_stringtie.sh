@@ -1,44 +1,45 @@
 #!/bin/bash
 # Phase 2 - StringTie assembly, merge, quantification, TPM matrix, tissue tracking.
 #
-#   05 align (phase 1) ─> 06 assemble (array) ─> 07 merge + candidate fasta ─┬─> 08 quantify (array) ─> 09 TPM matrix
-#                                                                              └─> 15 gffcompare tracking
+#   06 assemble (per sample)   needs: BAMs
+#   07 merge + candidates      needs: an assembly for EVERY sample
+#   08 quantify (per sample)   needs: BAMs + merged GTF
+#   15 tissue tracking         needs: candidates + every sample's assembly
+#   09 TPM matrix              needs: every sample's t_data.ctab
 #
-# Usage: ./submit_2_stringtie.sh [--dry-run] [--standalone]
-#   --dry-run     run the checks and print the sbatch commands without submitting
-#   --standalone  do not wait on phase 1 (use when the BAMs already exist)
+# Usage: bash submit_2_stringtie.sh [--dry-run]
+#   --dry-run  show what would be submitted without submitting
 #
-# Dependencies: 06 = aftercorr/afterok(05);  07 = afterok(06);  08, 15 = afterok(07);  09 = afterok(08)
-# 15 (tracking) lives here because it only needs the sample assemblies + candidates from 06/07;
-# phase 4 waits on it. 09 and 15 do not depend on the model-prediction phase.
+# No job-ID dependencies: each run submits only the steps whose inputs are ready and whose outputs
+# are not done, then prints a status table. Typical order: run 1 -> 06;  run 2 -> 07;  run 3 -> 08 and 15;
+# run 4 -> 09. If a sample can't be assembled, remove it from the metadata file or fix it first:
+# merge waits for all of them.
 
-set -euo pipefail
+set -eo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/submit_lib.sh"
 parse_flags "$@"
-load_upstream phase1
+load_samples
 
-# ---- preflight ----
-count_samples
 need_file "$REF_ANN"  "mRNA GTF (config: REF_ANN)"
+check_gtf_ids "$REF_ANN"
 need_file "$GENOME"   "genome fasta (config: GENOME)"
 need_file "$RBIO_SIF" "R tools image (config: RBIO_SIF)"
-if (( STANDALONE )); then need_dir "$STAR_DIR" "STAR BAM directory (config: STAR_DIR)"; fi
 preflight_done
 
-# ---- submit ----
-DEP=$(dep "${ARRAY_DEP_TYPE}:${ALIGN_JOB:-}")
-ASSEMBLE_JOB=$(submit 06_stringtie_assemble.sb stringtie --array="1-${N_SAMPLES}" ${DEP:+"$DEP"})
+bam_ok()        { local n=${NEW_IDS[$1]}; [[ -s "${STAR_DIR}/${n}_Aligned.sortedByCoord.out.bam" && -s "${STAR_DIR}/${n}_Aligned.sortedByCoord.out.bam.bai" ]]; }
+assembly_done() { local n=${NEW_IDS[$1]}; [[ -s "${ASSEMBLY_DIR}/${n}_assembled.gtf" ]]; }
+quant_done()    { local n=${NEW_IDS[$1]}; [[ -s "${QUANT_DIR}/${n}/${n}_quant.gtf" && -s "${QUANT_DIR}/${n}/t_data.ctab" ]]; }
 
-DEP=$(dep "afterok:${ASSEMBLE_JOB}")
-MERGE_JOB=$(submit    07_stringtie_merge.sb    stringtie ${DEP:+"$DEP"})
+ASSEMBLIES=(); CTABS=()
+for n in "${NEW_IDS[@]}"; do
+    ASSEMBLIES+=("${ASSEMBLY_DIR}/${n}_assembled.gtf")
+    CTABS+=("${QUANT_DIR}/${n}/t_data.ctab")
+done
 
-DEP=$(dep "afterok:${MERGE_JOB}")
-QUANT_JOB=$(submit    08_stringtie_quantify.sb stringtie --array="1-${N_SAMPLES}" ${DEP:+"$DEP"})
-TRACK_JOB=$(submit    15_track_preds.sb        track     ${DEP:+"$DEP"})
+step_array  assemble 06_stringtie_assemble.sb stringtie assembly_done bam_ok
+step_single merge    07_stringtie_merge.sb    stringtie --done "$MERGED_GTF" "$CANDIDATES_GTF" "$CANDIDATES_FASTA" --need "$REF_ANN" "$GENOME" "${ASSEMBLIES[@]}"
+step_array  quant    08_stringtie_quantify.sb stringtie quant_done bam_ok "$MERGED_GTF"
+step_single track    15_track_preds.sb        track     --done "$TRACKING_SUMMARY" --need "$CANDIDATES_GTF" "$CANDIDATES_FASTA" "${ASSEMBLIES[@]}"
+step_single tpm      09_build_tpm_matrix.sb   stringtie --done "$TPM_MATRIX" --need "$CANDIDATES_GTF" "${CTABS[@]}"
 
-DEP=$(dep "afterok:${QUANT_JOB}")
-TPM_JOB=$(submit      09_build_tpm_matrix.sb   stringtie ${DEP:+"$DEP"})
-
-save_ids phase2 ASSEMBLE_JOB MERGE_JOB QUANT_JOB TPM_JOB TRACK_JOB
-info "Phase 2 submitted. Candidates: ${CANDIDATES_GTF} / ${CANDIDATES_FASTA}"
-monitor_hint
+print_status

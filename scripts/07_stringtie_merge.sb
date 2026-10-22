@@ -7,8 +7,13 @@
 
 # ========>-------- Merge assembled GTF files from StringTie into a master GTF file --------<======== #
 
+set -eo pipefail
+
 # 1. Paths
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+
+# A non-empty output means "done" to the submit scripts, so remove everything if any part fails.
+trap '[ $? -eq 0 ] || rm -f "$MERGED_GTF" "$CANDIDATES_GTF" "$CANDIDATES_FASTA"' EXIT
 
 # Inputs
 GTF_DIR="$ASSEMBLY_DIR"
@@ -61,5 +66,7 @@ ml purge
 ml load gffread
 
 gffread -w $SEQ_OUT -g $GENOME $CAN_GTF
+
+[ -s "$CAN_GTF" ] && [ -s "$SEQ_OUT" ] || { echo "ERROR: candidate GTF/fasta is empty" >&2; exit 1; }
 
 echo -e "Transcript sequence extraction complete:\n$CAN_GTF\n$SEQ_OUT"

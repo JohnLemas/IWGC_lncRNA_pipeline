@@ -37,12 +37,6 @@ DB_DIR="${BASE}/databases"              # SortMeRNA default db, UniProt/DIAMOND 
 # Was hard-coded to /mnt/scratch/lemasjoh; widen this if a tool needs paths outside BASE.
 BIND_DIR="${BASE}"
 
-# Job-array dependency type used between sample-wise array steps
-# (fastp->sortmerna, sortmerna->align, align->stringtie assemble).
-#   aftercorr = task N starts as soon as task N of the previous array succeeds (samples stream through)
-#   afterok   = wait for EVERY task of the previous array
-ARRAY_DEP_TYPE="aftercorr"
-
 # ---- 3. Input files (live in BASE/SPEC/01_inputs/) -------------------------
 GENOME="${INPUT_ROOT}/${SPEC}_genome.fasta"   # Just the chromosome contigs- no unplaced sequences or mito/plastid assemblies
 REF_ANN="${INPUT_ROOT}/${SPEC}_mRNA.gtf"      # this has to be a gtf file. convert using gffread -T
