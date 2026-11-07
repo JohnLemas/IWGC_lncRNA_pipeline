@@ -56,6 +56,9 @@ sed -i 's/species/A.thaliana/g' A.thaliana/02_scripts/*sb
 - [Track Predictions](#track-predictions)
   - Uses metadata to assign tissue type specificity to each predicted lncRNA
   - Can be run directly after StringTie on the entire candidate set
+- [TE annotations](#te-annotations)
+  - Run EDTA separately
+  - Needed: *TEanno.gff3 and *TEanno.split.gff3 
 ---
 ### Alignment array
 INPUTS
@@ -557,4 +560,19 @@ NOTES
 - assembly runs as an array job using the metadata to build the array
 - merge combines *de novo* transcriptome assembly and candidate feature extraction
 - outputs candidate lncRNA files used for all prediction tools
+---
+### TE annotations
+Transposable element annotations from Extensive Denovo TE Annotator (EDTA 1.9.6) are used in this pipeline. The two files used are:
+- *TEanno.gff3
+  - The full homology-based and structural annotations for the species
+  - Contains additional child features that will increase lncRNA/TE overlap. See below.
+-  *TEanno.split.gff3
+  - EDTA splits elements into non-overlapping features (Better for visualization or plotting density)
+
+Move these two files into species/01_inputs and clean the *TEanno.gff3 file for downstream intersection:
+```bash
+# Deduplicate by removing child features for more robust intersection results
+# species_TE.gff3 is used by intersect_classify.sb
+awk -F'\t' '/^#/ || $3 !~ /^(repeat_region|long_terminal_repeat|target_site_duplication)$/' species/01_inputs/*TEanno.gff3 > species/01_inputs/species_TE.gff3
+```
 ---
