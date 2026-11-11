@@ -26,6 +26,7 @@ date
 set -eo pipefail
 
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+SEQKIT_IMG="$SEQKIT_SIF"
 
 # A non-empty output means "done" to the submit scripts, so remove the deliverables if any part fails.
 trap '[ $? -eq 0 ] || rm -f "$FINAL_ALL_FASTA" "$FINAL_ALL_GTF" "$FINAL_ALL_ANNOTATION" "$FINAL_COL_FASTA" "$FINAL_COL_GTF" "$FINAL_COL_ANNOTATION" "$FINAL_ISOFORM_TABLE"' EXIT
@@ -45,8 +46,6 @@ gtf_subset() {
     awk -F'\t' "$AWK_FUNCS"' NR==FNR{keep[tolower($1)]=1; next} /^#/{next} (tolower(attr("transcript_id")) in keep)' "$1" "$2"
 }
 
-ml purge
-ml load SeqKit
 
 # =======>------- 1. All isoforms that passed every filter -------<======== #
 
@@ -56,7 +55,7 @@ sort -u "$FINAL_IDS" > "${FINAL_WORK}/${SPEC}_final_ids.txt"          # also the
 N_IDS=$(wc -l < "${FINAL_WORK}/${SPEC}_final_ids.txt")
 
 gtf_subset "${FINAL_WORK}/${SPEC}_final_ids.txt" "$CANDIDATES_GTF" > "$FINAL_ALL_GTF"
-seqkit grep -i -f "${FINAL_WORK}/${SPEC}_final_ids.txt" "$CANDIDATES_FASTA" > "$FINAL_ALL_FASTA"
+singularity exec -B "$BIND_DIR" "$SEQKIT_IMG" seqkit grep -i -f "${FINAL_WORK}/${SPEC}_final_ids.txt" "$CANDIDATES_FASTA" > "$FINAL_ALL_FASTA"
 
 N_GTF=$(awk -F'\t' '$3=="transcript"' "$FINAL_ALL_GTF" | wc -l)
 N_FA=$(grep -c '>' "$FINAL_ALL_FASTA" || true)
@@ -99,7 +98,7 @@ awk -F'\t' 'NR>1 && $5==1 {print $1}' "$FINAL_ISOFORM_TABLE" > "${FINAL_WORK}/${
 N_LOCI=$(wc -l < "${FINAL_WORK}/${SPEC}_collapsed_ids.txt")
 
 gtf_subset "${FINAL_WORK}/${SPEC}_collapsed_ids.txt" "$FINAL_ALL_GTF" > "$FINAL_COL_GTF"
-seqkit grep -i -f "${FINAL_WORK}/${SPEC}_collapsed_ids.txt" "$FINAL_ALL_FASTA" > "$FINAL_COL_FASTA"
+singularity exec -B "$BIND_DIR" "$SEQKIT_IMG" seqkit grep -i -f "${FINAL_WORK}/${SPEC}_collapsed_ids.txt" "$FINAL_ALL_FASTA" > "$FINAL_COL_FASTA"
 
 echo "Transcripts (all isoforms): ${N_IDS}   Loci (collapsed): ${N_LOCI}"
 
