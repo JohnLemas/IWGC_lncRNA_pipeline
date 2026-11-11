@@ -11,9 +11,8 @@
 # FastQC is skipped for files that already have output, so re-submitting
 # resumes where a previous run stopped.
 
-ml purge
-ml load FastQC/0.12.1-Java-11
-ml load MultiQC
+FASTQC_IMG="$FASTQC_SIF"
+MULTIQC_IMG="$MULTIQC_SIF"
 
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 THREADS="${SLURM_CPUS_PER_TASK:-8}"
@@ -48,11 +47,11 @@ done
 echo ">>> [${STAGE}] ${#ALL[@]} files total, ${#TODO[@]} still need FastQC"
 
 if (( ${#TODO[@]} > 0 )); then
-  fastqc -t "${THREADS}" -o "${OUT}" "${TODO[@]}" \
+  singularity exec -B "$BIND_DIR" "$FASTQC_IMG" fastqc -t "${THREADS}" -o "${OUT}" "${TODO[@]}" \
     || { echo ">>> [${STAGE}] FastQC failed; skipping MultiQC" >&2; exit 1; }
 fi
 
-multiqc "${OUT}" -n "${NAME}" -o "${OUT}" --no-data-dir --force \
+singularity exec -B "$BIND_DIR" "$MULTIQC_IMG"  multiqc "${OUT}" -n "${NAME}" -o "${OUT}" --no-data-dir --force \
   || { echo ">>> [${STAGE}] MultiQC failed" >&2; exit 1; }
 
 echo ">>> [${STAGE}] done: ${OUT}/${NAME}.html"
