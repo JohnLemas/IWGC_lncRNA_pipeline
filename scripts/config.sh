@@ -50,12 +50,24 @@ RAW_FASTQ="${INPUT_ROOT}/raw_fastq"           # Directory containing raw FASTQ f
 BARRNAP_GENOME="${GENOME}"
 
 # ---- 4. Containers / databases ----------------------------------------------
+# Custom containers
 SMR_SIF="${IMG_DIR}/sortmerna.sif"            # also runs barrnap (02) and sortmerna (02, 03)
 RBIO_SIF="${IMG_DIR}/rbio_tools.sif"          # R helpers: tpm, track, intersect, intersect_te, finalize, lnc_predict
 FEELNC_SIF="${IMG_DIR}/FEELnc2.sif"
 CPAT_SIF="${IMG_DIR}/cpat_plant.sif"
 LNCBOOST_SIF="${IMG_DIR}/plant_lnc_boost.sif"
+
+# Public Containers
+STAR_SIF="${IMG_DIR}/star_2.7.11b.sif"
 GFFCOMPARE_SIF="${IMG_DIR}/gffcompare.sif"
+AGAT_SIF="${IMG_DIR}/agat_1.5.0.sif"
+FASTP_SIF="${IMG_DIR}/fastp_0.23.4.sif"
+FASTQC_SIF="${IMG_DIR}/fastqc_0.12.1.sif"
+MULTIQC_SIF="${IMG_DIR}/multiqc_1.14--pyhdfd78af_0.sif"
+SAMTOOLS_SIF="${IMG_DIR}/samtools_1.18.sif"
+SEQKIT_SIF="${IMG_DIR}/seqkit_2.3.0.sif"
+STRINGTIE_SIF="${IMG_DIR}/stringtie_2.2.1.sif"
+
 
 # ---- 5. Step outputs, in pipeline order -------------------------------------
 # 00 STAR genomeGenerate  -> index (read by 05)
