@@ -10,6 +10,7 @@ set -euo pipefail
 # 1. Paths & Variables
 # Paths - all defined in config.sh (RAW_FASTQ, FASTP_DIR, METADATA)
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"
+IMG="$FASTP_SIF"
 
 IN_DIR="$RAW_FASTQ"
 OUT_DIR="$FASTP_DIR"
@@ -22,19 +23,13 @@ OLD_ID=$(echo "$ROW" | awk -F'\t' '{print $1}')
 NEW_ID=$(echo "$ROW" | awk -F'\t' '{print $2}')
 
 
-# 2. Environment Setup
-# There is no module for fastp, so use a conda environment
-ml purge
-ml load Miniforge3 # hpcc module for conda
-conda activate fastp
-
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $OLD_ID"
 
 # --- SMART SEQUENCING MODE CHECK ---
 # Case 1: True PAIRED-END (Both _1 and _2 files must exist)
 if [ -f "${IN_DIR}/${OLD_ID}_1.fastq.gz" ] && [ -f "${IN_DIR}/${OLD_ID}_2.fastq.gz" ]; then
     echo "Processing $OLD_ID as TRUE PAIRED-END"
-    fastp \
+    singularity exec -B "$BIND_DIR" "$IMG" fastp \
       -i "${IN_DIR}/${OLD_ID}_1.fastq.gz" \
       -I "${IN_DIR}/${OLD_ID}_2.fastq.gz" \
       -o "${OUT_DIR}/${NEW_ID}_1_trim.fastq.gz" \
@@ -47,7 +42,7 @@ if [ -f "${IN_DIR}/${OLD_ID}_1.fastq.gz" ] && [ -f "${IN_DIR}/${OLD_ID}_2.fastq.
 # Case 2: SINGLE-END but named with a '_1.fastq.gz' suffix
 elif [ -f "${IN_DIR}/${OLD_ID}_1.fastq.gz" ]; then
     echo "Processing $OLD_ID as SINGLE-END (Input file: ${OLD_ID}_1.fastq.gz)"
-    fastp \
+    singularity exec -B "$BIND_DIR" "$IMG" fastp \
       -i "${IN_DIR}/${OLD_ID}_1.fastq.gz" \
       -o "${OUT_DIR}/${NEW_ID}_trim.fastq.gz" \
       --thread 8 -x -g \
@@ -57,7 +52,7 @@ elif [ -f "${IN_DIR}/${OLD_ID}_1.fastq.gz" ]; then
 # Case 3: SINGLE-END named traditionally '.fastq.gz'
 elif [ -f "${IN_DIR}/${OLD_ID}.fastq.gz" ]; then
     echo "Processing $OLD_ID as SINGLE-END (Input file: ${OLD_ID}.fastq.gz)"
-    fastp \
+    singularity exec -B "$BIND_DIR" "$IMG" fastp \
       -i "${IN_DIR}/${OLD_ID}.fastq.gz" \
       -o "${OUT_DIR}/${NEW_ID}_trim.fastq.gz" \
       --thread 8 -x -g \
