@@ -13,6 +13,7 @@ source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"
 ANNO="$REF_ANN"
 INDEX="$STAR_INDEX"
 OUT="$INTRON_LIMITS"
+IMG="$STAR_SIF"
 
 # ------ STAR Genome Generation ------ #
 
@@ -21,11 +22,9 @@ echo -e ">>>STAR:\n\tRunning build mode.\nInput fasta:\n\t${GENOME}\nInput annot
 echo -e "..making output directory:\n\t${INDEX}"
 mkdir -p $INDEX
 
-echo -e "...loading module.."
-ml purge
-ml load STAR/2.7.11b-GCC-13.2.0
-
-STAR \
+echo -e "running STAR image"
+  
+singularity exec -B "$BIND_DIR" "$IMG" STAR \
      --runMode genomeGenerate \
      --runThreadN $SLURM_CPUS_PER_TASK \
      --genomeDir $INDEX \
