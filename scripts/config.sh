@@ -68,6 +68,7 @@ MULTIQC_SIF="${IMG_DIR}/multiqc_1.14--pyhdfd78af_0.sif"
 SAMTOOLS_SIF="${IMG_DIR}/samtools_1.18.sif"
 SEQKIT_SIF="${IMG_DIR}/seqkit_2.3.0.sif"
 STRINGTIE_SIF="${IMG_DIR}/stringtie_2.2.1.sif"
+DIAMOND_SIF="${IMG_DIR}/diamond_2.1.8.sif"
 
 
 # ---- 5. Step outputs, in pipeline order -------------------------------------
