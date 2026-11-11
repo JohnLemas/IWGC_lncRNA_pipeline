@@ -7,6 +7,8 @@
 
 # 1. Paths & Variables - all defined in config.sh
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"
+STAR_IMG="$STAR_SIF"
+SAMTOOLS_IMG="$SAMTOOLS_SIF"
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
 # Make sure the metadata is built so that the read ID from the machine is column 1 and the new ID with tissue type info is column 2. 
@@ -34,11 +36,6 @@ mkdir -p "$OUT_DIR" "$TMP_DIR"
 
 THREADS=${SLURM_CPUS_PER_TASK:-1}
 
-# 2. Environment Setup
-ml purge
-ml load STAR
-ml load SAMtools
-
 echo "Processing Array Task: $SLURM_ARRAY_TASK_ID | Sample ID: $NEW_ID ($OLD_ID)"
 
 STAR_OPTS=(
@@ -59,7 +56,7 @@ STAR_OPTS=(
 # --- 3. PAIRED-END ---
 if [ -f "${DATA_DIR}/${NEW_ID}_1_sortmerna.fastq.gz" ] && [ -f "${DATA_DIR}/${NEW_ID}_2_sortmerna.fastq.gz" ]; then
     echo "Aligning Paired-End non-rRNA reads for $NEW_ID..."
-    STAR "${STAR_OPTS[@]}" \
+    singularity exec -B "$BIND_DIR" "$STAR_IMG" STAR "${STAR_OPTS[@]}" \
       --readFilesIn "${DATA_DIR}/${NEW_ID}_1_sortmerna.fastq.gz" "${DATA_DIR}/${NEW_ID}_2_sortmerna.fastq.gz" \
       --outFileNamePrefix "${TMP_DIR}/pe_" \
       || { echo "ERROR: STAR PE failed for $NEW_ID" >&2; exit 1; }
@@ -68,7 +65,7 @@ fi
 # --- 4. SINGLE-END ---
 if [ -f "${DATA_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz" ]; then
     echo "Aligning Single-End non-rRNA reads for $NEW_ID..."
-    STAR "${STAR_OPTS[@]}" \
+    singularity exec -B "$BIND_DIR" "$STAR_IMG" STAR "${STAR_OPTS[@]}" \
       --readFilesIn "${DATA_DIR}/${NEW_ID}_singles_sortmerna.fastq.gz" \
       --outFileNamePrefix "${TMP_DIR}/se_" \
       || { echo "ERROR: STAR SE failed for $NEW_ID" >&2; exit 1; }
@@ -81,16 +78,16 @@ FINAL_BAM="${OUT_DIR}/${NEW_ID}_Aligned.sortedByCoord.out.bam"
 
 if [ -f "$PE_BAM" ] && [ -f "$SE_BAM" ]; then
     echo "Merging PE and SE BAM files into $FINAL_BAM..."
-    samtools merge -@ "$THREADS" -o "$FINAL_BAM" "$PE_BAM" "$SE_BAM"
-    samtools index -@ "$THREADS" "$FINAL_BAM"
+    singularity exec -B "$BIND_DIR" "$SAMTOOLS_IMG" samtools merge -@ "$THREADS" -o "$FINAL_BAM" "$PE_BAM" "$SE_BAM"
+    singularity exec -B "$BIND_DIR" "$SAMTOOLS_IMG" samtools index -@ "$THREADS" "$FINAL_BAM"
 elif [ -f "$PE_BAM" ]; then
     echo "Moving PE BAM to final destination..."
     mv "$PE_BAM" "$FINAL_BAM"
-    samtools index -@ "$THREADS" "$FINAL_BAM"
+    singularity exec -B "$BIND_DIR" "$SAMTOOLS_IMG" samtools index -@ "$THREADS" "$FINAL_BAM"
 elif [ -f "$SE_BAM" ]; then
     echo "Moving SE BAM to final destination..."
     mv "$SE_BAM" "$FINAL_BAM"
-    samtools index -@ "$THREADS" "$FINAL_BAM"
+    singularity exec -B "$BIND_DIR" "$SAMTOOLS_IMG" samtools index -@ "$THREADS" "$FINAL_BAM"
 else
     echo "ERROR: No BAM files generated for $NEW_ID in $TMP_DIR"
     exit 1
