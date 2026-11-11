@@ -15,6 +15,7 @@ set -euo pipefail
 # tracking summary TSV as an input to add the Tissue_Type column to its final table.
 
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMAGE="${GFFCOMPARE_SIF}"
 
 OUT_DIR="$TRACE_DIR"
 REF="$CANDIDATES_GTF"
@@ -24,12 +25,7 @@ mkdir -p $OUT_DIR
 
 ls -d ${ASSEMBLY_DIR}/*_assembled.gtf > $LIST
 
-ml purge
-ml load Miniforge3
-
-conda activate gffcompare
-
-gffcompare -r $REF -i $LIST -o ${OUT_DIR}/candidate
+singularity exec -B "$BIND_DIR" $IMAGE gffcompare -r $REF -i $LIST -o ${OUT_DIR}/candidate
 
 # ========>------- Parse the output files -------<======== #
 
