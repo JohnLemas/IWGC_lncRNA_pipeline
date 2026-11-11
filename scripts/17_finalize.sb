@@ -1,0 +1,161 @@
+#!/bin/bash --login
+#SBATCH --job-name=finalize
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=64G
+#SBATCH --time=00:30:00
+# NOTE: --output is NOT set here: submit_4_final_outputs.sh passes it (log dir from LOG_DIR in config.sh).
+
+# =============================================================================
+# 17_finalize.sb - build the deliverables in 12_finalize from the IDs that passed
+# every filter (written by 16_intersect_classify.sb).
+#
+#   all isoforms that passed : <SPEC>_lncRNA_all_isoforms.{fasta,gtf}  + _annotation.tsv
+#   longest isoform / locus  : <SPEC>_lncRNA_collapsed.{fasta,gtf}     + _annotation.tsv
+#   transcript -> locus map  : <SPEC>_isoform_table.tsv
+#
+# Requires CANDIDATES_GTF / CANDIDATES_FASTA to contain ALL isoforms (07 must not collapse),
+# so the filters see every isoform and the collapse happens here, on the passing set only.
+# =============================================================================
+
+# Fix the locale warnings and suppress the systemd/timedatectl warning from R packages
+export LC_ALL=C
+export LANG=C
+export TZ="UTC"
+date
+
+set -eo pipefail
+
+source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+
+# A non-empty output means "done" to the submit scripts, so remove the deliverables if any part fails.
+trap '[ $? -eq 0 ] || rm -f "$FINAL_ALL_FASTA" "$FINAL_ALL_GTF" "$FINAL_ALL_ANNOTATION" "$FINAL_COL_FASTA" "$FINAL_COL_GTF" "$FINAL_COL_ANNOTATION" "$FINAL_ISOFORM_TABLE"' EXIT
+
+mkdir -p "$FINAL_DIR" "$FINAL_WORK"
+
+for f in "$FINAL_IDS" "$CANDIDATES_GTF" "$CANDIDATES_FASTA"; do
+    [ -s "$f" ] || { echo "ERROR: missing or empty input: $f" >&2; exit 1; }
+done
+
+# awk helper: attr KEY -> value of KEY "value" in the GTF attribute column ($9; run with -F'\t').
+# The leading space stops "gene_id" from matching inside "ref_gene_id".
+AWK_FUNCS='function attr(key,   s, re) { s=" " $9; re=" " key " \"[^\"]+\""; if (match(s, re)) return substr(s, RSTART+length(key)+3, RLENGTH-length(key)-4); return "" }'
+
+# gtf_subset IDLIST GTF -> GTF lines whose transcript_id is in IDLIST (exact, case-insensitive like 16)
+gtf_subset() {
+    awk -F'\t' "$AWK_FUNCS"' NR==FNR{keep[tolower($1)]=1; next} /^#/{next} (tolower(attr("transcript_id")) in keep)' "$1" "$2"
+}
+
+ml purge
+ml load SeqKit
+
+# =======>------- 1. All isoforms that passed every filter -------<======== #
+
+echo -e ">>>Pulling GTF and sequences for ${FINAL_IDS}...\n"
+
+sort -u "$FINAL_IDS" > "${FINAL_WORK}/${SPEC}_final_ids.txt"          # also the copy the R finalize step reads
+N_IDS=$(wc -l < "${FINAL_WORK}/${SPEC}_final_ids.txt")
+
+gtf_subset "${FINAL_WORK}/${SPEC}_final_ids.txt" "$CANDIDATES_GTF" > "$FINAL_ALL_GTF"
+seqkit grep -i -f "${FINAL_WORK}/${SPEC}_final_ids.txt" "$CANDIDATES_FASTA" > "$FINAL_ALL_FASTA"
+
+N_GTF=$(awk -F'\t' '$3=="transcript"' "$FINAL_ALL_GTF" | wc -l)
+N_FA=$(grep -c '>' "$FINAL_ALL_FASTA" || true)
+echo "IDs: ${N_IDS}  GTF transcripts: ${N_GTF}  FASTA records: ${N_FA}"
+if [ "$N_GTF" -ne "$N_IDS" ] || [ "$N_FA" -ne "$N_IDS" ]; then
+    echo "ERROR: some final IDs were not found in ${CANDIDATES_GTF} / ${CANDIDATES_FASTA}" >&2
+    exit 1
+fi
+
+# =======>------- 2. Isoform table + longest isoform per locus -------<======== #
+# Locus = gene_id from the GTF (falls back to the transcript ID minus its last .N).
+# Length = spliced length (sum of exons), the same as the gffread -w sequence length.
+# Ties are broken by the smaller transcript ID so reruns give the same representative.
+# N_passing_isoforms counts only isoforms that passed all filters.
+
+echo -e ">>>Collapsing to the longest isoform per locus...\n"
+
+{
+    printf 'Transcript_ID\tLocus\tLength\tN_passing_isoforms\tRepresentative\n'
+    awk -F'\t' -v OFS='\t' "$AWK_FUNCS"'
+        $3=="transcript" || $3=="exon" {
+            tid = attr("transcript_id"); if (tid == "") next
+            if ($3 == "transcript") {
+                gid = attr("gene_id"); if (gid == "") { gid = tid; sub(/\.[0-9]+$/, "", gid) }
+                gene[tid] = gid
+            } else {
+                len[tid] += $5 - $4 + 1
+            }
+        }
+        END {
+            for (t in gene) {
+                g = gene[t]; n[g]++
+                if (!(g in best) || len[t] > len[best[g]] || (len[t] == len[best[g]] && t < best[g])) best[g] = t
+            }
+            for (t in gene) { g = gene[t]; print t, g, len[t] + 0, n[g], (best[g] == t ? 1 : 0) }
+        }' "$FINAL_ALL_GTF" | sort -t $'\t' -k2,2V -k1,1V
+} > "$FINAL_ISOFORM_TABLE"
+
+awk -F'\t' 'NR>1 && $5==1 {print $1}' "$FINAL_ISOFORM_TABLE" > "${FINAL_WORK}/${SPEC}_collapsed_ids.txt"
+N_LOCI=$(wc -l < "${FINAL_WORK}/${SPEC}_collapsed_ids.txt")
+
+gtf_subset "${FINAL_WORK}/${SPEC}_collapsed_ids.txt" "$FINAL_ALL_GTF" > "$FINAL_COL_GTF"
+seqkit grep -i -f "${FINAL_WORK}/${SPEC}_collapsed_ids.txt" "$FINAL_ALL_FASTA" > "$FINAL_COL_FASTA"
+
+echo "Transcripts (all isoforms): ${N_IDS}   Loci (collapsed): ${N_LOCI}"
+
+# =======>------- 3. Classify (FEELnc_classifier.pl) on all isoforms -------<======== #
+
+cp "$FINAL_ALL_GTF" "${FINAL_WORK}/${SPEC}_lncRNA.gtf"                # the R finalize step expects <prefix>_lncRNA.gtf in its -d directory
+LNC_GTF="${FINAL_WORK}/${SPEC}_lncRNA.gtf"
+
+echo -e ">>> Running FEELnc_classifier.pl on ${LNC_GTF}...\n"
+
+singularity exec \
+  --env PERL5LIB="${FEELNC_HOME}/lib" \
+  "$FEELNC_SIF" \
+  perl "${FEELNC_HOME}/scripts/FEELnc_classifier.pl" \
+    -i "$LNC_GTF" \
+    -a "$REF_ANN" \
+    -w 10000 \
+    -m 100000 \
+    -v 1 > "${FINAL_WORK}/${SPEC}_lncRNA_classes.txt"
+
+echo -e ">>>Classification complete.\n"
+
+# =======>------- 4. Intersect lncRNA/TE -------<======== #
+
+echo -e ">>> Running lncRNA/TE intersection...\n"
+singularity run "$RBIO_SIF" intersect_te -g "$TE_GFF3" -t "$LNC_GTF" -o "$FINAL_WORK"
+
+# =======>------- 5. Annotation tables -------<======== #
+# build_final_annotation.R reads everything from -d, so it runs once on all isoforms. Then:
+#   - Locus / N_passing_isoforms / Representative are appended from the isoform table
+#   - the collapsed table is the Representative==1 rows of the all-isoform table
+
+echo -e ">>> Building annotation tables...\n"
+
+TEMP_TSV="${FINAL_WORK}/${SPEC}_tmp.tsv"
+singularity run "$RBIO_SIF" finalize -d "$FINAL_WORK" -o "$TEMP_TSV" -p "$SPEC" -t "$TRACKING_SUMMARY" --tpm "$TPM_SUMMARY"
+
+# sort by chromosome and start, then append the isoform columns (joined on the ID column)
+{
+    head -n 1 "$TEMP_TSV"
+    tail -n +2 "$TEMP_TSV" | sort -t $'\t' -k1,1V -k2,2n
+} | awk -F'\t' -v OFS='\t' '
+    NR==FNR { if (FNR > 1) { loc[$1]=$2; npi[$1]=$4; rep[$1]=$5 } next }
+    FNR==1  { for (i=1; i<=NF; i++) if ($i == "ID") idc = i
+              if (!idc) { print "ERROR: no ID column in annotation table" > "/dev/stderr"; exit 1 }
+              print $0, "Locus", "N_passing_isoforms", "Representative"; next }
+            { print $0, loc[$idc], npi[$idc], rep[$idc] }' "$FINAL_ISOFORM_TABLE" - > "$FINAL_ALL_ANNOTATION"
+
+awk -F'\t' 'NR==1 || $NF==1' "$FINAL_ALL_ANNOTATION" > "$FINAL_COL_ANNOTATION"
+
+N_ROWS_ALL=$(( $(wc -l < "$FINAL_ALL_ANNOTATION") - 1 ))
+N_ROWS_COL=$(( $(wc -l < "$FINAL_COL_ANNOTATION") - 1 ))
+echo "Annotation rows: all isoforms ${N_ROWS_ALL} (expected ${N_IDS}), collapsed ${N_ROWS_COL} (expected ${N_LOCI})"
+[ "$N_ROWS_ALL" -eq "$N_IDS" ] && [ "$N_ROWS_COL" -eq "$N_LOCI" ] \
+    || echo "WARNING: row counts differ from the ID counts - check for duplicate rows in the classifier or TPM joins" >&2
+
+echo -e "\n>>>Finalize complete. Outputs in ${FINAL_DIR}:"
+ls -1 "$FINAL_DIR"
+date

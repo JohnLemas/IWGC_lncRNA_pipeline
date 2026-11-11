@@ -129,10 +129,22 @@ TRACE_DIR="${OUTPUT_ROOT}/10_trace"
 TRACE_LIST="${TRACE_DIR}/file_list.txt"
 TRACKING_SUMMARY="${TRACE_DIR}/${SPEC}_tracking_summary.tsv"     # read by 16
 
-# 16 intersect + classify + finalize
+# 16 intersect (IDs that pass every filter)
 INT_CLASS_DIR="${OUTPUT_ROOT}/11_int_class"
-INT_PFX="${INT_CLASS_DIR}/${SPEC}"                               # file prefix used by every 16 sub-step
-FINAL_ANNOTATION="${INT_PFX}_final_annotation.tsv"               # the end product
+INT_PFX="${INT_CLASS_DIR}/${SPEC}"                               # file prefix used by 16
+FINAL_IDS="${INT_PFX}_final_ids.txt"                             # 16 -> read by 17 (also: ${INT_PFX}_intersection_summary.csv)
+
+# 17 finalize: sequences, GTFs and annotation tables, all isoforms + longest-isoform-per-locus
+FINAL_DIR="${OUTPUT_ROOT}/12_finalize"
+FINAL_WORK="${FINAL_DIR}/work"                                   # intermediates (classifier, TE overlap, BEDs); safe to delete
+FINAL_PFX="${FINAL_DIR}/${SPEC}"
+FINAL_ALL_FASTA="${FINAL_PFX}_lncRNA_all_isoforms.fasta"
+FINAL_ALL_GTF="${FINAL_PFX}_lncRNA_all_isoforms.gtf"
+FINAL_ALL_ANNOTATION="${FINAL_PFX}_lncRNA_all_isoforms_annotation.tsv"
+FINAL_COL_FASTA="${FINAL_PFX}_lncRNA_collapsed.fasta"            # longest isoform per locus
+FINAL_COL_GTF="${FINAL_PFX}_lncRNA_collapsed.gtf"
+FINAL_COL_ANNOTATION="${FINAL_PFX}_lncRNA_collapsed_annotation.tsv"  # the end product
+FINAL_ISOFORM_TABLE="${FINAL_PFX}_isoform_table.tsv"             # transcript -> locus, length, representative flag
 
 # ---- 6. Side utility: truth set clustering (cd-hit.sb, not part of the DAG) --
 TRUTH_DIR="${BASE}/truth_data/${SPEC}"
