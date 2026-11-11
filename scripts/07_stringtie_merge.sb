@@ -11,6 +11,8 @@ set -eo pipefail
 
 # 1. Paths
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+STRINGTIE_IMG="$STRINGTIE_SIF"
+GFFREAD_IMG="$GFFREAD_SIF"
 
 # A non-empty output means "done" to the submit scripts, so remove everything if any part fails.
 trap '[ $? -eq 0 ] || rm -f "$MERGED_GTF" "$CANDIDATES_GTF" "$CANDIDATES_FASTA"' EXIT
@@ -41,15 +43,12 @@ if (( ${#gtf_filePath[@]} == 0 )); then
     exit 1
 fi
 
-ml purge
-ml load StringTie/2.2.1-GCC-11.2.0-Python-2.7.18
-
 # 2. Run the Merge
 # --merge: Tells StringTie to combine the list
 # -G: Your original reference (keeps known gene names)
 # -o: The final master file
 # -m: Minimum transcript length to include in the master (200bp)
-stringtie --merge -G $REF_GTF -m 200 -o $OUT_GTF ${gtf_filePath[*]}
+singularity exec -B "$BIND_DIR" "$STRINGTIE_IMG" stringtie --merge -G $REF_GTF -m 200 -o $OUT_GTF ${gtf_filePath[*]}
 
 echo "Master Merge Complete: $OUT_GTF"
 
@@ -62,10 +61,7 @@ echo -e "Extracting candidate transcript sequences from $(basename $OUT_GTF)...\
 
 grep 'transcript_id "MSTRG' $OUT_GTF > $CAN_GTF
 
-ml purge
-ml load gffread
-
-gffread -w $SEQ_OUT -g $GENOME $CAN_GTF
+singularity exec -B "$BIND_DIR" "$GFFREAD_IMG" gffread -w $SEQ_OUT -g $GENOME $CAN_GTF
 
 [ -s "$CAN_GTF" ] && [ -s "$SEQ_OUT" ] || { echo "ERROR: candidate GTF/fasta is empty" >&2; exit 1; }
 

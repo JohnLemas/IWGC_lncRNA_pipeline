@@ -16,6 +16,7 @@
 
 # 1. Paths
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMG="$STRINGTIE_SIF"
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$METADATA" | tr -d '\r')
@@ -25,9 +26,6 @@ BAM_DIR="$STAR_DIR"
 OUT_DIR="${QUANT_DIR}/${ID}"
 
 mkdir -p "$OUT_DIR"
-
-ml purge
-ml load StringTie/2.2.1-GCC-11.2.0-Python-2.7.18
 
 # 2. Run StringTie in reference-only quantification mode
 # -e: only estimate abundance for transcripts in -G (no novel assembly here)
@@ -42,7 +40,7 @@ cmd="stringtie \
 
 echo -e "..running command:\n${cmd}\n\n"
 
-$cmd
+singularity exec -B "$BIND_DIR" "$IMG" $cmd
 STATUS=$?
 
 # The submit scripts treat ${ID}_quant.gtf + t_data.ctab as "done": don't leave them behind after a failure.

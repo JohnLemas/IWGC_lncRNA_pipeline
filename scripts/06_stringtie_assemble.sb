@@ -7,6 +7,7 @@
 
 # 1. Paths
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
+IMG="$STRINGTIE_SIF"
 
 # Extract row for current task and parse column 1 (raw ID) and column 2 (new name)
 ROW=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$METADATA" | tr -d '\r')
@@ -18,9 +19,6 @@ REF_GTF="$REF_ANN"
 OUT_DIR="$ASSEMBLY_DIR"
 
 mkdir -p $OUT_DIR
-
-ml purge
-ml load StringTie/2.2.1-GCC-11.2.0-Python-2.7.18
 
 # 2. Run StringTie
 # -G: Reference guided (finds known + novel)
@@ -38,7 +36,7 @@ cmd="stringtie \
 
 echo -e "..running command:\n${cmd}\n\n"
 
-$cmd
+singularity exec -B "$BIND_DIR" "$IMG" $cmd
 STATUS=$?
 
 # The submit scripts treat a non-empty ${ID}_assembled.gtf as "done", so it only appears once
