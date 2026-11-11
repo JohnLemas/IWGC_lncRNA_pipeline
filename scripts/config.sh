@@ -60,6 +60,7 @@ LNCBOOST_SIF="${IMG_DIR}/plant_lnc_boost.sif"
 # Public Containers
 STAR_SIF="${IMG_DIR}/star_2.7.11b.sif"
 GFFCOMPARE_SIF="${IMG_DIR}/gffcompare.sif"
+GFFREAD_SIF="${IMG_DIR}/gffread_0.12.7.sif"
 AGAT_SIF="${IMG_DIR}/agat_1.5.0.sif"
 FASTP_SIF="${IMG_DIR}/fastp_0.23.4.sif"
 FASTQC_SIF="${IMG_DIR}/fastqc_0.12.1.sif"
