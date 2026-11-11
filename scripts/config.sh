@@ -12,7 +12,7 @@
 
 # ---- 1. Project identity ----------------------------------------------------
 # Working directory location
-BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev"
+BASE="/mnt/scratch/lemasjoh/BASF/lncRNA_met_dev/repo"
 
 # Species prefix for both the working directory and output files
 # IWGC standard is first three letters of the family name and the two first letters of the species name
@@ -38,9 +38,9 @@ DB_DIR="${BASE}/databases"              # SortMeRNA default db, UniProt/DIAMOND 
 BIND_DIR="${BASE}"
 
 # ---- 3. Input files (live in BASE/SPEC/01_inputs/) -------------------------
-GENOME="${INPUT_ROOT}/${SPEC}_genome.fasta"   # Just the chromosome contigs- no unplaced sequences or mito/plastid assemblies
+GENOME="${INPUT_ROOT}/${SPEC}.chromosomes.fa"   # Just the chromosome contigs- no unplaced sequences or mito/plastid assemblies
 REF_ANN="${INPUT_ROOT}/${SPEC}_mRNA.gtf"      # this has to be a gtf file. convert using gffread -T
-TE_GFF3="${INPUT_ROOT}/${SPEC}_TEanno.gff3"   # Direct output from EDTA- rename for convenience
+TE_GFF3="${INPUT_ROOT}/${SPEC}_TEa.gff3"   # Direct output from EDTA- rename for convenience
 METADATA="${INPUT_ROOT}/${SPEC}_metadata.txt" # TAB-delimited. Sequencing ID in column 1. a label designating tissue type and replicate number should be in column 2 (ie sdl_rt_2 or exp_lvs_1)
 RAW_FASTQ="${INPUT_ROOT}/raw_fastq"           # Directory containing raw FASTQ files
 # Genome that barrnap scans for rRNA genes (step 02). Point this at the full NCBI datasets assembly
@@ -55,6 +55,7 @@ RBIO_SIF="${IMG_DIR}/rbio_tools.sif"          # R helpers: tpm, track, intersect
 FEELNC_SIF="${IMG_DIR}/FEELnc2.sif"
 CPAT_SIF="${IMG_DIR}/cpat_plant.sif"
 LNCBOOST_SIF="${IMG_DIR}/plant_lnc_boost.sif"
+GFFCOMPARE_SIF="${IMG_DIR}/gffcompare.sif"
 
 # ---- 5. Step outputs, in pipeline order -------------------------------------
 # 00 STAR genomeGenerate  -> index (read by 05)
@@ -88,8 +89,7 @@ STAR_DIR="${OUTPUT_ROOT}/03_STAR"
 STRINGTIE_DIR="${OUTPUT_ROOT}/04_stringtie"
 ASSEMBLY_DIR="${STRINGTIE_DIR}/sample_assemblies"                # 06 writes ${ID}_assembled.gtf; 07 and 15 read
 MERGED_GTF="${STRINGTIE_DIR}/${SPEC}_denovo_trans.gtf"           # 07 -> read by 08
-ALL_GTF="${STRINGTIE_DIR}/${SPEC}_all_candidates.gtf"            # 07 Temp: before collapsing to longest isoform
-CANDIDATES_GTF="${STRINGTIE_DIR}/${SPEC}_candidates.gtf"         # 07 (MSTRG-only, after collapse) -> read by 09,10,15,16
+CANDIDATES_GTF="${STRINGTIE_DIR}/${SPEC}_candidates.gtf"         # 07 -> read by 09,10,15,16
 CANDIDATES_FASTA="${STRINGTIE_DIR}/${SPEC}_candidates.fasta"     # 07 (gffread -w) -> read by 11,12,13,14,15,16
 QUANT_DIR="${STRINGTIE_DIR}"                                     # 08 writes ${QUANT_DIR}/${ID}/t_data.ctab; 09 reads
 TPM_PREFIX="${STRINGTIE_DIR}/${SPEC}_lncRNA_TPM"                 # 09 -> .matrix.tsv / .summary.tsv
