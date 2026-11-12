@@ -11,11 +11,11 @@
 # FastQC is skipped for files that already have output, so re-submitting
 # resumes where a previous run stopped.
 
-FASTQC_IMG="$FASTQC_SIF"
-MULTIQC_IMG="$MULTIQC_SIF"
-
 source "${CONFIG:-${SLURM_SUBMIT_DIR:-.}/config.sh}"   # all paths come from config.sh
 THREADS="${SLURM_CPUS_PER_TASK:-8}"
+
+FASTQC_IMG="$FASTQC_SIF"
+MULTIQC_IMG="$MULTIQC_SIF"
 
 case "${SLURM_ARRAY_TASK_ID}" in
   0) STAGE="raw"
