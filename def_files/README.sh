@@ -34,3 +34,9 @@ singularity pull seqkit_2.3.0.sif docker://quay.io/biocontainers/seqkit:2.3.0--h
 
 # 9. AGAT
 singularity pull agat_1.5.0.sif docker://quay.io/biocontainers/agat:1.5.0--pl5321hdfd78af_0
+
+# 10. GFFread
+singularity pull gffread_0.12.7.sif docker://quay.io/biocontainers/gffread:0.12.7--hdcf5f25_4
+
+# 11. DIAMOND
+singularity pull diamond_2.1.8.sif docker://quay.io/biocontainers/diamond:2.1.8--h43eeafb_0
